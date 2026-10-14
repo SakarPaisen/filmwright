@@ -1,0 +1,62 @@
+<!doctype html>
+<!-- Stack scene: a tall pile of paper sheets drops in, then condenses (slides and shrinks) into one clean card with a
+     headline bar and three bullet lines, and a result label appears. Pure function of time (see ../runtime.js).
+     PARAMS: {title:string, stackLabel:string, resultLabel:string, bullets:[3 short strings]}
+     Defaults: title "From the pile to the point", stackLabel "Hundreds of notes", resultLabel "One clear summary",
+               bullets ["What was decided","Who owns it","What happens next"]. -->
+<html><head><meta charset="utf-8"></head><body>
+<script>window.PARAMS = /*PARAMS*/{"title":"From the pile to the point","stackLabel":"Hundreds of notes","resultLabel":"One clear summary","bullets":["What was decided","Who owns it","What happens next"],"theme":"main"}/*END*/;</script>
+<script src="../runtime.js"></script>
+<script>
+const { W, H, U, vertical, P, ease, seg, lerp, clamp, accent, rnd, D } = Scene;
+const title = P.title != null ? P.title : "From the pile to the point", stackLabel = P.stackLabel || "Hundreds of notes", resultLabel = P.resultLabel || "One clear summary";
+const bullets = ((P.bullets && P.bullets.length ? P.bullets : ["What happened", "Who is involved", "What to look at next"]).concat(["", "", ""])).slice(0, 3);
+const NS = 12;
+const L = vertical
+  ? { titleY: 22, titleFs: 22, sw: 170, sh: 220, off: 13, cx: W / 2, base: 500, labY: 640, labFs: 16, card: { w: 330, h: 270 }, cardY: 330, bFs: 15, hFs: 0 }
+  : { titleY: 30, titleFs: 40, sw: 250, sh: 320, off: 14, cx: W / 2, base: 520, labY: 722, labFs: 26, card: { w: 620, h: 360 }, cardY: 400, bFs: 26, hFs: 0 };
+const tDrop = 0.04 * D, tMerge = 0.48 * D, dMerge = 0.2 * D;
+const r0 = rnd(5), sheets = [];
+for (let i = 0; i < NS; i++) sheets.push({ rot: (r0() - 0.5) * 11, dx: (r0() - 0.5) * 22 * U, dl: i * 0.028 * D, sh: 0.82 + r0() * 0.15 });
+let R = {};
+Scene.define({
+  setup(S) {
+    const st = S.stage;
+    R.cv = Scene.el("canvas", { width: W, height: H }, st).getContext("2d");
+    R.title = Scene.el("div", { class: "serif", text: title, style: `position:absolute;left:${24 * U}px;right:${24 * U}px;top:${L.titleY}px;text-align:center;z-index:5;text-shadow:0 0 6px #0f1222,0 0 14px #0f1222,0 2px 22px #0f1222;font-weight:700;font-size:${L.titleFs}px;line-height:1.1` }, st);
+    R.sheets = sheets.map((s, i) => {
+      const e = Scene.el("div", { style: `position:absolute;left:0;top:0;width:${L.sw}px;height:${L.sh}px;border-radius:${vertical ? 5 : 8}px;background:rgb(${236 - (i % 3) * 5},${233 - (i % 3) * 5},${224 - (i % 3) * 5});box-shadow:0 6px 18px rgba(0,0,0,.4);overflow:hidden` }, st);
+      const pd = L.sw * 0.12;
+      Scene.el("div", { style: `position:absolute;left:${pd}px;top:${pd}px;width:${L.sw * 0.35}px;height:${L.sh * 0.04}px;border-radius:99px;background:#9295a6` }, e);
+      for (let k = 0; k < 7; k++) Scene.el("div", { style: `position:absolute;left:${pd}px;top:${pd * 1.6 + L.sh * 0.11 + k * L.sh * 0.095}px;width:${(L.sw - pd * 2) * (k % 3 === 2 ? 0.6 : k % 3 === 1 ? 0.85 : 0.97)}px;height:${L.sh * 0.03}px;border-radius:99px;background:#c4c6d0` }, e);
+      return e;
+    });
+    const c = L.card;
+    R.card = Scene.el("div", { style: `position:absolute;left:${L.cx - c.w / 2}px;top:${L.cardY - c.h / 2}px;width:${c.w}px;height:${c.h}px;border-radius:${vertical ? 14 : 20}px;background:#171a30;border:2px solid ${accent};box-shadow:0 0 ${50 * U}px rgba(124,92,255,.22),0 24px 60px rgba(0,0,0,.5);padding:${c.h * 0.1}px ${c.w * 0.08}px` }, st);
+    Scene.el("div", { style: `width:62%;height:${c.h * 0.095}px;border-radius:99px;background:${accent};margin-bottom:${c.h * 0.08}px` }, R.card);
+    R.bl = bullets.map((b) => { const r = Scene.el("div", { style: `display:flex;align-items:center;gap:${c.w * 0.04}px;height:${c.h * 0.19}px;font-size:${L.bFs}px;color:#e6edf6;font-weight:500` }, R.card);
+      Scene.el("i", { style: `flex:none;display:block;width:${L.bFs * 0.5}px;height:${L.bFs * 0.5}px;border-radius:50%;background:${accent}` }, r); Scene.el("span", { text: b, style: "white-space:nowrap;overflow:hidden;text-overflow:ellipsis" }, r); return r; });
+    const lab = (txt, col) => Scene.el("div", { text: txt, style: `position:absolute;left:0;right:0;top:${L.labY}px;text-align:center;font-size:${L.labFs}px;font-weight:600;color:${col};letter-spacing:.06em;text-transform:uppercase` }, st);
+    R.l1 = lab(stackLabel, "#a7aac4"); R.l2 = lab(resultLabel, accent);
+  },
+  render(t) {
+    Scene.field(R.cv, t, { n: vertical ? 50 : 100, alpha: 0.5 * seg(t, 0, 1) });
+    R.title.style.opacity = ease.out(seg(t, 0.1, 0.8));
+    const m = seg(t, tMerge, dMerge);
+    sheets.forEach((s, i) => {
+      const k = seg(t, tDrop + s.dl, 0.12 * D), fall = ease.out5(k), bounce = ease.back(seg(t, tDrop + s.dl, 0.15 * D));
+      const sx = L.cx + s.dx, sy = L.base - i * L.off * 1 - L.sh / 2 + (L.sh / 2) * 0;
+      const y0 = sy + (1 - ease.out(k)) * -(H * 0.7) ;
+      const mk = ease.io(clamp((m - (NS - 1 - i) * 0.03) / (1 - (NS - 1) * 0.03)));
+      const x = lerp(sx, L.cx, mk), y = lerp(y0, L.cardY, mk), sc = lerp(1, 0.5, mk), rot = lerp(s.rot, 0, mk);
+      const e = R.sheets[i]; e.style.opacity = clamp(k * 4) * (1 - ease.out(clamp((mk - 0.55) / 0.45)));
+      e.style.transform = `translate(${x - L.sw / 2}px,${y - L.sh / 2}px) rotate(${rot}deg) scale(${sc})`;
+    });
+    const ck = ease.out(seg(t, tMerge + dMerge * 0.55, 0.12 * D));
+    R.card.style.opacity = ck; R.card.style.transform = `scale(${0.7 + 0.3 * ck})`;
+    R.bl.forEach((b, i) => { const k = ease.out(seg(t, tMerge + dMerge + 0.02 * D + i * 0.05 * D, 0.06 * D)); b.style.opacity = k; b.style.transform = `translateX(${-16 * U * (1 - k)}px)`; });
+    R.l1.style.opacity = ease.out(seg(t, 0.15 * D, 0.06 * D)) * (1 - ease.out(seg(t, tMerge, 0.06 * D)));
+    R.l2.style.opacity = ease.out(seg(t, tMerge + dMerge + 0.05 * D, 0.08 * D)); R.l2.style.transform = `translateY(${10 * U * (1 - R.l2.style.opacity)}px)`;
+  },
+});
+</script></body></html>

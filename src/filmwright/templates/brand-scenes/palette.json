@@ -1,0 +1,39 @@
+{
+ "native": {
+  "bg": "#0f1222",
+  "bg2": "#171a30",
+  "card": "#22264a",
+  "line": "#343a6b",
+  "ink": "#f4f5fb",
+  "muted": "#a9aecb",
+  "accent": "#7c5cff",
+  "on_accent": "#ffffff"
+ },
+ "families": {
+  "#0f1120": "neutral",
+  "#181b35": "neutral",
+  "#23263f": "neutral",
+  "#262a47": "neutral",
+  "#282b47": "neutral",
+  "#2c2f48": "neutral",
+  "#2f00ef": "accent",
+  "#343855": "neutral",
+  "#363a59": "neutral",
+  "#3f10ff": "accent",
+  "#40466e": "neutral",
+  "#434765": "neutral",
+  "#454a6d": "neutral",
+  "#4a4f79": "neutral",
+  "#54597b": "neutral",
+  "#777a93": "neutral",
+  "#777c9e": "neutral",
+  "#7e85b8": "neutral",
+  "#9295a6": "neutral",
+  "#9ba0c6": "neutral",
+  "#9fa2b3": "neutral",
+  "#a1a6cc": "neutral",
+  "#a7aac4": "neutral",
+  "#bfc1cd": "neutral",
+  "#c4c6d0": "neutral"
+ }
+}

@@ -1,0 +1,97 @@
+<!doctype html>
+<!-- Funnel scene: many small dots fall into a wide funnel; filter chips light up one after another, the dots that do not
+     match dim and drop away, and only a handful come out as a tidy short list. Pure function of time (see ../runtime.js).
+     PARAMS: {title:string, topLabel:string, filters:[string] (1-5), bottomLabel:string, keep:number}
+     Defaults: title "Narrowing it down", topLabel "Every ticket", filters ["Priority","Team","Status","Date"],
+               bottomLabel "One short list", keep 5. (theme/episode/of are read by the runtime.) -->
+<html><head><meta charset="utf-8"></head><body>
+<script>window.PARAMS = /*PARAMS*/{"title":"Narrowing it down","topLabel":"Every ticket","filters":["Priority","Team","Status","Date"],"bottomLabel":"One short list","keep":5,"theme":"main"}/*END*/;</script>
+<script src="../runtime.js"></script>
+<script>
+const { W, H, U, vertical, P, ease, seg, lerp, clamp, accent, rnd, D } = Scene;
+const title = P.title != null ? P.title : "Narrowing it down", topLabel = P.topLabel || "Every request", bottomLabel = P.bottomLabel || "One short list";
+const filters = (P.filters && P.filters.length ? P.filters : ["Team", "Priority", "Due date", "Status"]).slice(0, 5), F = filters.length;
+const N = 76, keep = clamp(Math.round(P.keep || 5), 1, 8);
+const hex = (h) => [1, 3, 5].map((i) => parseInt(h.substr(i, 2), 16));
+const ACC = hex(accent), BLUE = [143, 170, 210], GREY = [84, 100, 124];
+const mix = (a, b, k) => "rgb(" + a.map((v, i) => Math.round(lerp(v, b[i], clamp(k)))).join(",") + ")";
+// ---- layout
+const L = vertical
+  ? { titleY: 22, titleFs: 22, topY: 84, topFs: 14, yT: 118, yB: 500, cx: W / 2, wTop: 380, wBot: 96, chipFs: 12, chipH: 24, r: 3.6,
+      card: { x: 40, y: 534, w: 350, h: 214 }, headH: 40, labFs: 14, rowMax: 34 }
+  : { titleY: 30, titleFs: 40, topY: 112, topFs: 22, yT: 168, yB: 735, cx: W * 0.34, wTop: 620, wBot: 150, chipFs: 20, chipH: 38, r: 6.5,
+      card: { x: W * 0.64, y: 190, w: W * 0.31, h: 420 }, headH: 66, labFs: 24, rowMax: 62 };
+const sp = (L.yB - L.yT) / (F + 1), widthAt = (y) => lerp(L.wTop, L.wBot, clamp((y - L.yT) / (L.yB - L.yT)));
+const rowH = Math.min(L.rowMax, (L.card.h - L.headH - 14) / keep);
+const sched = [];  // transition start per filter
+const span = 0.46 / F;
+for (let j = 1; j <= F; j++) sched.push((0.30 + (j - 1) * span) * D);
+const DUR = Math.min(0.09 * D, span * D * 0.9), tList = 0.77 * D, dList = 0.1 * D;
+const cnt = []; for (let j = 1; j <= F; j++) cnt.push(Math.round(N * Math.pow(keep / N, j / F)));
+cnt[F - 1] = keep;
+const r0 = rnd(21), dots = [];
+for (let i = 0; i < N; i++) dots.push({ rx: r0(), ry: r0(), dl: r0() * 0.12, side: r0() < 0.5 ? -1 : 1, jit: r0() });
+const bandPos = (k, d) => { const yc = L.yT + (k + 0.5) * sp; return [L.cx + (d.rx - 0.5) * widthAt(yc) * 0.74, yc + (d.ry - 0.5) * sp * 0.52]; };
+const rowPos = (i) => [L.card.x + 22 * (vertical ? 1 : 1.3) + L.r, L.card.y + L.headH + (i + 0.5) * rowH];
+let R = {};
+Scene.define({
+  setup(S) {
+    const st = S.stage;
+    R.cv = Scene.el("canvas", { width: W, height: H }, st).getContext("2d");
+    R.title = Scene.el("div", { class: "serif", text: title, style: `position:absolute;left:${24 * U}px;right:${24 * U}px;top:${L.titleY}px;text-align:center;font-weight:700;font-size:${L.titleFs}px;line-height:1.1` }, st);
+    R.top = Scene.el("div", { text: topLabel, style: `position:absolute;left:${L.cx - 200}px;width:400px;top:${L.topY}px;text-align:center;font-size:${L.topFs}px;letter-spacing:.12em;text-transform:uppercase;color:#a7aac4;font-weight:600` }, st);
+    const sv = Scene.svg("svg", { width: W, height: H, style: "position:absolute;left:0;top:0" }, st); R.sv = sv;
+    const x1 = L.cx - L.wTop / 2, x2 = L.cx + L.wTop / 2, y1 = L.yT, y2 = L.yB, b1 = L.cx - L.wBot / 2, b2 = L.cx + L.wBot / 2;
+    R.fun = Scene.svg("path", { d: `M${x1} ${y1} L${b1} ${y2} L${b2} ${y2} L${x2} ${y1}`, fill: "rgba(155,160,198,.05)", stroke: "#363a59", "stroke-width": 2, "stroke-linejoin": "round" }, sv);
+    R.sieves = filters.map((f, j) => { const y = L.yT + (j + 1) * sp; return Scene.svg("line", { x1: L.cx - widthAt(y) / 2, x2: L.cx + widthAt(y) / 2, y1: y, y2: y, stroke: accent, "stroke-width": 2, "stroke-dasharray": "6 6" }, sv); });
+    R.chips = filters.map((f, j) => { const y = L.yT + (j + 1) * sp;
+      return Scene.el("div", { text: f, style: `position:absolute;left:${L.cx}px;top:${y}px;transform:translate(-50%,-50%);white-space:nowrap;height:${L.chipH}px;line-height:${L.chipH - 2}px;padding:0 ${L.chipH * 0.55}px;border-radius:999px;font-size:${L.chipFs}px;font-weight:600;border:1.5px solid #40466e` }, st); });
+    const c = L.card;
+    R.card = Scene.el("div", { style: `position:absolute;left:${c.x}px;top:${c.y}px;width:${c.w}px;height:${c.h}px;border-radius:${14 * (vertical ? 0.8 : 1.2)}px;background:#171a30;border:1.5px solid #363a59` }, st);
+    R.lab = Scene.el("div", { text: bottomLabel, style: `position:absolute;left:0;right:0;top:0;height:${L.headH}px;line-height:${L.headH}px;text-align:center;font-size:${L.labFs}px;font-weight:700;color:${accent};letter-spacing:.04em` }, R.card);
+    R.rows = []; for (let i = 0; i < keep; i++) { const p = rowPos(i), bh = rowH * 0.3, x0 = p[0] - c.x + L.r * 2 + 8;
+      const a = Scene.el("div", { style: `position:absolute;left:${x0}px;top:${p[1] - c.y - bh / 2}px;width:${c.w - x0 - 24}px;height:${bh}px;border-radius:${bh / 2}px;background:#343855;transform-origin:left;transform:scaleX(0)` }, R.card);
+      R.rows.push(a); }
+    R.dots = dots.map(() => Scene.el("i", { style: `position:absolute;left:0;top:0;display:block;width:${L.r * 2}px;height:${L.r * 2}px;border-radius:50%` }, st));
+  },
+  render(t) {
+    Scene.field(R.cv, t, { n: vertical ? 50 : 100, alpha: 0.55 * seg(t, 0, 1) });
+    const ti = ease.out(seg(t, 0.1, 0.8)); R.title.style.opacity = ti; R.title.style.transform = `translateY(${10 * (1 - ti)}px)`;
+    R.top.style.opacity = ease.out(seg(t, 0.3, 0.7));
+    R.fun.setAttribute("opacity", ease.out(seg(t, 0.2, 0.8)));
+    filters.forEach((f, j) => {
+      const ts = sched[j], on = seg(t, ts - 0.03 * D, 0.04 * D), off = seg(t, ts + DUR, 0.05 * D), act = on * (1 - off), appear = ease.out(seg(t, 0.15 * D + j * 0.02 * D, 0.06 * D));
+      const ch = R.chips[j]; ch.style.opacity = appear;
+      ch.style.background = mix([34, 38, 74], ACC, act); ch.style.color = mix([226, 233, 243], [20, 26, 38], act);
+      ch.style.borderColor = mix([52, 58, 107], ACC, Math.max(act, on)); ch.style.boxShadow = `0 0 ${24 * act * U + 0.1}px rgba(124,92,255,${0.5 * act})`;
+      ch.style.transform = `translate(-50%,-50%) scale(${1 + 0.07 * act})`;
+      R.sieves[j].setAttribute("opacity", appear * (0.25 + 0.75 * act));
+    });
+    const cardK = ease.out(seg(t, 0.62 * D, 0.08 * D)); R.card.style.opacity = cardK; R.card.style.transform = `translateY(${14 * (1 - cardK)}px)`;
+    R.card.style.borderColor = mix([44, 50, 92], ACC, seg(t, tList, dList));
+    R.lab.style.opacity = ease.out(seg(t, 0.8 * D, 0.06 * D));
+    R.rows.forEach((rw, i) => { rw.style.transform = `scaleX(${ease.out(seg(t, tList + dList * 0.7 + i * 0.012 * D, 0.05 * D))})`; });
+    dots.forEach((d, i) => {
+      const e = seg(t, 0.04 * D + d.dl * D, 0.1 * D), el = R.dots[i];
+      let p = bandPos(0, d); let y0 = p[1]; p = [p[0], lerp(L.yT - 70 * (vertical ? 0.6 : 1), p[1], e * e * (3 - 2 * e) * 0.5 + e * e * 0.5)];
+      let op = clamp(e * 2), col = mix(BLUE, BLUE, 0), glow = 0, scl = 1, k = 0;
+      for (let j = 0; j < F; j++) {
+        const ts = sched[j]; if (t < ts) break;
+        if (i < cnt[j]) { const a = bandPos(j, d), b = bandPos(j + 1, d), kk = ease.io(seg(t, ts, DUR)); p = [lerp(a[0], b[0], kk), lerp(a[1], b[1], kk)]; k = j + 1; }
+        else {
+          const a = bandPos(j, d), kk = seg(t, ts, DUR * 1.8), dim = ease.out(seg(kk, 0, 0.4)), s = seg(kk, 0.3, 0.7);
+          p = [a[0] + d.side * (s * 60 * U + s * s * 90 * U), a[1] + s * s * 0.3 * H]; op = (1 - ease.out(s)) * (1 - 0.55 * dim); col = mix(BLUE, GREY, dim); k = -1; break;
+        }
+      }
+      if (k === F && i < keep) {
+        glow = ease.out(seg(t, sched[F - 1] + DUR * 0.6, DUR)); const a = bandPos(F, d), b = rowPos(i), kk = ease.io(seg(t, tList, dList)); p = [lerp(a[0], b[0], kk), lerp(a[1], b[1], kk)];
+      }
+      if (k >= 0) col = mix(BLUE, ACC, glow);
+      scl = 1 + 0.25 * (k > 0 ? k / F : 0) + 0.45 * glow;
+      el.style.opacity = op; el.style.background = col;
+      el.style.boxShadow = glow > 0.1 ? `0 0 ${10 * glow * U + 1}px rgba(124,92,255,${0.7 * glow})` : "none";
+      el.style.transform = `translate(${p[0] - L.r}px,${p[1] - L.r}px) scale(${scl})`;
+    });
+  },
+});
+</script></body></html>

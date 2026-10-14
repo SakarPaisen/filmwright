@@ -1,0 +1,69 @@
+<!doctype html>
+<!-- Explainer scene for the demo film builder (`explainer: explainers/<name>.html` in a section).
+     Use one when the narration explains something the app doesn't show on screen: a rule, a flow, a before/after.
+     Edit SCENE below. It's recorded at the film's resolution for as long as the narration runs; ?d=<seconds> paces it.
+     Keep it calm: one idea, three to five steps, short words. IBM Plex Sans (bundled, SIL OFL) is injected when recorded. -->
+<html><head><meta charset="utf-8">
+<style>
+  :root { --bg:#0f1222; --card:#22264a; --ink:#f4f5fb; --muted:#a9aecb; --accent:#7c5cff; --line:#343a6b; }
+  * { box-sizing:border-box; margin:0 }
+  html,body { width:1440px; height:810px; background:var(--bg); color:var(--ink);
+              font-family:"IBM Plex Sans",system-ui,sans-serif; overflow:hidden }
+  .bar { position:absolute; left:0; top:0; width:9px; height:100%; background:var(--accent) }
+  .head { position:absolute; left:115px; top:110px; right:115px }
+  .eyebrow { color:var(--accent); font-weight:700; letter-spacing:.06em; text-transform:uppercase; font-size:22px }
+  h1 { font-size:58px; line-height:1.1; margin-top:14px; font-weight:700 }
+  .sub { color:var(--muted); font-size:26px; margin-top:16px; max-width:1100px }
+  .steps { position:absolute; left:115px; right:115px; top:420px; display:flex; gap:34px; align-items:stretch }
+  .step { flex:1; background:var(--card); border:1px solid var(--line); border-radius:16px; padding:26px 26px 28px;
+          position:relative; opacity:0; transform:translateY(18px) }
+  .step b { display:block; font-size:28px; margin-bottom:10px }
+  .step span { color:var(--muted); font-size:21px; line-height:1.4 }
+  .step .n { position:absolute; top:-18px; left:24px; width:36px; height:36px; border-radius:50%; background:var(--accent);
+             color:#ffffff; font-weight:800; display:grid; place-items:center; font-size:19px }
+  .step.key { border-color:var(--accent); box-shadow:0 0 0 1px var(--accent), 0 18px 50px rgba(124,92,255,.22) }
+  .arrow { position:absolute; top:50%; right:-30px; width:26px; height:2px; background:var(--accent); opacity:0; transform-origin:left }
+  .arrow::after { content:""; position:absolute; right:-2px; top:-5px; border:6px solid transparent; border-left:8px solid var(--accent) }
+  .in { animation:rise .7s cubic-bezier(.2,.7,.2,1) forwards }
+  .draw { animation:draw .5s ease-out forwards }
+  .fade { opacity:0; animation:fade .8s ease forwards }
+  @keyframes rise { to { opacity:1; transform:none } }
+  @keyframes draw { from { opacity:1; transform:scaleX(0) } to { opacity:1; transform:scaleX(1) } }
+  @keyframes fade { to { opacity:1 } }
+</style></head>
+<body>
+<div class="bar"></div>
+<div class="head"><div class="eyebrow fade" id="eyebrow"></div><h1 class="fade" id="title"></h1><p class="sub fade" id="sub"></p></div>
+<div class="steps" id="steps"></div>
+<script>
+// ---- edit this -------------------------------------------------------------------------------------
+const SCENE = {
+  eyebrow: "How it works",
+  title: "<one-line idea the viewer should leave with>",
+  sub: "<optional supporting sentence>",
+  steps: [                                   // 3–5 steps; key: true marks the one to emphasise
+    { title: "<step one>", text: "<a short line>" },
+    { title: "<step two>", text: "<a short line>" },
+    { title: "<step three>", text: "<a short line>", key: true },
+  ],
+};
+// ----------------------------------------------------------------------------------------------------
+const d = parseFloat(new URLSearchParams(location.search).get("d") || "10");
+const $ = (id) => document.getElementById(id);
+$("eyebrow").textContent = SCENE.eyebrow; $("title").textContent = SCENE.title; $("sub").textContent = SCENE.sub || "";
+["eyebrow", "title", "sub"].forEach((id, i) => $(id).style.animationDelay = (0.2 + i * 0.35) + "s");
+const first = 1.6, last = Math.max(first + 0.5, d - 2.2);      // steps arrive evenly, then the scene rests
+const gap = SCENE.steps.length > 1 ? (last - first) / (SCENE.steps.length - 1) : 0;
+SCENE.steps.forEach((s, i) => {
+  const el = document.createElement("div");
+  el.className = "step" + (s.key ? " key" : "");
+  el.innerHTML = `<div class="n">${i + 1}</div><b></b><span></span>` + (i < SCENE.steps.length - 1 ? `<i class="arrow"></i>` : "");
+  el.querySelector("b").textContent = s.title; el.querySelector("span").textContent = s.text || "";
+  $("steps").appendChild(el);
+  const at = first + i * gap;
+  el.style.animationDelay = at + "s"; el.classList.add("in");
+  const arrow = el.querySelector(".arrow");
+  if (arrow) { arrow.style.animationDelay = (at + Math.min(0.9, gap * 0.6)) + "s"; arrow.classList.add("draw"); }
+});
+</script>
+</body></html>

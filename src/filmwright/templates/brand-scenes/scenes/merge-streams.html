@@ -1,0 +1,89 @@
+<!doctype html>
+<!-- Merge streams: three labelled streams of dots flow in, converge, and continue as ONE thicker glow stream into a result tile.
+     PARAMS: {labels:[3 strings] (default Email, Chat, Forms), result:string (default "One inbox"),
+              title:string (default "Three channels, one view"), caption:string (optional small line), theme:"main|alt|warm"}
+     Pure function of time (see ../runtime.js). Landscape: left to right. Vertical: top to bottom. -->
+<html><head><meta charset="utf-8"></head><body>
+<script>window.PARAMS = /*PARAMS*/{"labels":["Email","Chat","Forms"],"result":"One inbox","title":"Three channels, one view","caption":"Every message lands in the same place.","theme":"main"}/*END*/;</script>
+<script src="../runtime.js"></script>
+<script>
+const { W, H, U, vertical, P, ease, seg, lerp, clamp, accent, D } = Scene;
+const labels = (P.labels && P.labels.length ? P.labels : ["Email", "Chat", "Forms"]).slice(0, 3);
+while (labels.length < 3) labels.push("");
+const result = P.result || "One list", title = P.title || "Three inboxes, one list", caption = P.caption || "";
+const COL = ["#7db4ff", "#5fd3a0", "#b79cff"], ACC = "#7c5cff";
+const hex = (h) => [1, 3, 5].map((i) => parseInt(h.substr(i, 2), 16));
+const mix = (a, b, k) => { const A = hex(a), B = hex(b); return "rgb(" + A.map((v, i) => Math.round(lerp(v, B[i], k))).join(",") + ")"; };
+const bez = (p0, c1, c2, p1, u) => { const m = 1 - u; return [0, 1].map((i) => m * m * m * p0[i] + 3 * m * m * u * c1[i] + 3 * m * u * u * c2[i] + u * u * u * p1[i]); };
+// ---- geometry
+let S, M, E, tile, C1, C2;
+if (!vertical) {
+  S = [0.2, 0.5, 0.8].map((_, i) => [0.2 * W, [0.3, 0.5, 0.7][i] * H]); M = [0.54 * W, 0.5 * H];
+  tile = { x: 0.66 * W, y: 0.5 * H - 100 * U, w: 0.27 * W, h: 200 * U }; E = [tile.x, 0.5 * H];
+  C1 = (s) => [s[0] + 0.14 * W, s[1]]; C2 = () => [M[0] - 0.1 * W, M[1]];
+} else {
+  S = [0.2, 0.5, 0.8].map((x) => [x * W, 0.26 * H]); M = [0.5 * W, 0.53 * H];
+  tile = { x: 0.08 * W, y: 0.65 * H, w: 0.84 * W, h: 0.17 * H }; E = [0.5 * W, tile.y];
+  C1 = (s) => [s[0], s[1] + 0.1 * H]; C2 = () => [M[0], M[1] - 0.09 * H];
+}
+const SPEED = 0.22, NDOT = 16, MERGE_U = 0.6;
+const pos = (i, u) => u < MERGE_U ? bez(S[i], C1(S[i]), C2(), M, u / MERGE_U) : [lerp(M[0], E[0], (u - MERGE_U) / (1 - MERGE_U)), lerp(M[1], E[1], (u - MERGE_U) / (1 - MERGE_U))];
+const t0 = (i) => (0.10 + 0.04 * i) * D, tM = t0(1) + MERGE_U / SPEED;
+const T_TILE = tM - 0.6, T_ARR = tM + (1 - MERGE_U) / SPEED - 0.2, T_RES = T_ARR + 0.5, T_CAP = T_RES + 0.9;
+const pathD = (i) => { const c1 = C1(S[i]), c2 = C2(); return "M" + S[i] + " C" + c1 + " " + c2 + " " + M; };
+let R = {};
+Scene.define({
+  setup(st) {
+    const bg = Scene.el("canvas", { width: W, height: H }, st.stage); R.bg = bg.getContext("2d");
+    const sv = Scene.svg("svg", { width: W, height: H, style: "position:absolute;left:0;top:0" }, st.stage);
+    R.lanes = [0, 1, 2].map((i) => Scene.svg("path", { d: pathD(i), fill: "none", stroke: COL[i], "stroke-width": 2 * U, "stroke-linecap": "round", opacity: 0 }, sv));
+    R.glow = Scene.svg("line", { x1: M[0], y1: M[1], x2: E[0], y2: E[1], stroke: ACC, "stroke-width": 22 * U, "stroke-linecap": "round", opacity: 0, style: "filter:blur(" + 9 * U + "px)" }, sv);
+    R.thick = Scene.svg("line", { x1: M[0], y1: M[1], x2: M[0], y2: M[1], stroke: ACC, "stroke-width": 9 * U, "stroke-linecap": "round", opacity: 0.45 }, sv);
+    R.node = Scene.svg("circle", { cx: M[0], cy: M[1], r: 9 * U, fill: ACC, opacity: 0 }, sv);
+    const dc = Scene.el("canvas", { width: W, height: H }, st.stage); R.cv = dc.getContext("2d");
+    R.title = Scene.el("div", { class: "serif", text: title, style: "position:absolute;left:" + 24 * U + "px;right:" + 24 * U + "px;text-align:center;top:" + (vertical ? 34 : 52) * U + "px;font-weight:700;line-height:1.1;font-size:" + (vertical ? 30 : 46) * U + "px" }, st.stage);
+    R.pills = labels.map((l, i) => {
+      const w = (vertical ? 108 : 190) * U, h = (vertical ? 34 : 52) * U;
+      const x = vertical ? S[i][0] - w / 2 : S[i][0] - 0.095 * W - w / 2 + 0.0 * W, y = vertical ? S[i][1] - 0.055 * H - h / 2 : S[i][1] - h / 2;
+      const d = Scene.el("div", { text: l, style: "position:absolute;left:" + x + "px;top:" + y + "px;width:" + w + "px;height:" + h + "px;display:flex;align-items:center;justify-content:center;border-radius:999px;background:#171a30;border:1.5px solid " + COL[i] + ";color:" + COL[i] + ";font-weight:600;font-size:" + (vertical ? 14 : 24) * U + "px;opacity:0" }, st.stage);
+      return d;
+    });
+    R.tile = Scene.el("div", { style: "position:absolute;left:" + tile.x + "px;top:" + tile.y + "px;width:" + tile.w + "px;height:" + tile.h + "px;border-radius:" + 22 * U + "px;background:#171a30;border:1.5px solid #363a59;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:" + (vertical ? 6 : 14) * U + "px;opacity:0" }, st.stage);
+    const isz = (vertical ? 30 : 56) * U;
+    R.icon = Scene.el("div", { style: "width:" + isz + "px;height:" + isz + "px" }, R.tile);
+    R.icon.innerHTML = '<svg viewBox="0 0 40 40" width="100%" height="100%"><circle cx="20" cy="20" r="17" fill="none" stroke="' + ACC + '" stroke-width="2.5"/><path d="M11 21l6 6 12-13" fill="none" stroke="' + ACC + '" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    R.res = Scene.el("div", { class: "serif", text: result, style: "font-weight:700;color:" + ACC + ";font-size:" + (vertical ? 24 : 38) * U + "px;text-align:center;padding:0 " + 12 * U + "px;line-height:1.1;opacity:0" }, R.tile);
+    R.cap = Scene.el("div", { text: caption, style: "position:absolute;left:" + 28 * U + "px;right:" + 28 * U + "px;text-align:center;top:" + (vertical ? H * 0.86 : H - 76 * U) + "px;font-size:" + (vertical ? 14 : 24) * U + "px;color:#a9aecb;opacity:0" }, st.stage);
+  },
+  render(t) {
+    Scene.field(R.bg, t, { n: vertical ? 60 : 110, alpha: 0.45 * seg(t, 0, 1.2) });
+    const tt = ease.out(seg(t, 0.1, 0.8)); R.title.style.opacity = tt; R.title.style.transform = "translateY(" + 14 * U * (1 - tt) + "px)";
+    labels.forEach((_, i) => { const k = ease.out(seg(t, 0.35 + 0.18 * i, 0.6)); R.pills[i].style.opacity = k; R.pills[i].style.transform = "scale(" + (0.9 + 0.1 * k) + ")"; R.lanes[i].setAttribute("opacity", 0.28 * seg(t, t0(i) - 0.3, 0.8)); });
+    const th = ease.out(seg(t, tM - 0.35, 1.1)), tl = ease.out(seg(t, T_TILE, 0.7));
+    R.thick.setAttribute("x2", lerp(M[0], E[0], th)); R.thick.setAttribute("y2", lerp(M[1], E[1], th)); R.thick.setAttribute("opacity", 0.4 * (th > 0 ? 1 : 0));
+    R.glow.setAttribute("x2", lerp(M[0], E[0], th)); R.glow.setAttribute("y2", lerp(M[1], E[1], th)); R.glow.setAttribute("opacity", 0.3 * th);
+    R.node.setAttribute("opacity", ease.out(seg(t, tM - 0.4, 0.5))); R.node.setAttribute("r", (9 + 2 * Math.sin(t * 2.4)) * U);
+    R.tile.style.opacity = tl; R.tile.style.transform = "scale(" + (0.92 + 0.08 * tl) + ")";
+    const arr = seg(t, T_ARR, 0.9), pulse = Math.sin(clamp(arr) * Math.PI);
+    R.tile.style.borderColor = arr > 0 ? accent : "#363a59"; R.tile.style.boxShadow = "0 0 " + (14 + 36 * pulse) * U + "px rgba(124,92,255," + (arr > 0 ? 0.22 + 0.3 * pulse : 0) + ")";
+    const rs = ease.out(seg(t, T_RES, 0.7)); R.res.style.opacity = rs; R.res.style.transform = "translateY(" + 10 * U * (1 - rs) + "px)"; R.icon.style.opacity = rs; R.icon.style.transform = "scale(" + (0.7 + 0.3 * ease.back(seg(t, T_RES, 0.6))) + ")";
+    const cp = ease.out(seg(t, T_CAP, 0.8)); R.cap.style.opacity = cp;
+    // dots
+    const c = R.cv; c.clearRect(0, 0, W, H);
+    for (let i = 0; i < 3; i++) {
+      const h = (t - t0(i)) * SPEED;
+      for (let j = 0; j < NDOT; j++) {
+        const o = j / NDOT; if (h < o) continue;
+        const u = (((h - o) % 1) + 1) % 1, p = pos(i, u), a = Math.min(u / 0.05, 1) * Math.min((1 - u) / 0.07, 1);
+        const mk = clamp((u - 0.5) / 0.15), post = u > MERGE_U ? clamp((u - MERGE_U) / 0.1) : 0;
+        const off = Math.sin(j * 2.1 + i * 1.7) * 5 * U * post;
+        const x = p[0] + (vertical ? off : 0), y = p[1] + (vertical ? 0 : off);
+        c.globalAlpha = a; c.fillStyle = mix(COL[i], ACC, ease.io(mk));
+        if (mk > 0.5) { c.shadowColor = "rgba(124,92,255,.8)"; c.shadowBlur = 10 * U; } else c.shadowBlur = 0;
+        c.beginPath(); c.arc(x, y, (4.2 + 2.2 * mk) * U, 0, 6.283); c.fill();
+      }
+    }
+    c.globalAlpha = 1; c.shadowBlur = 0;
+  },
+});
+</script></body></html>

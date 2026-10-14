@@ -1,0 +1,74 @@
+<!doctype html>
+<!-- Calendar: a month grid whose dates light up one by one with a small pill (count) or dot; a counter grows.
+     Frame-exact: pure function of time (see ../runtime.js).
+     PARAMS: {month:string, year:number, firstWeekday:0-6 (0=Sunday, weekday of the 1st), days:number, highlights:[{day,count?}], title:string, countLabel:string}
+     Defaults: month "October", year 2026, firstWeekday 4, days 31, 9 highlighted days, title "Release calendar", countLabel "releases". -->
+<html><head><meta charset="utf-8"></head><body>
+<script>window.PARAMS = /*PARAMS*/{"month":"October","year":2026,"firstWeekday":4,"days":31,"title":"Release calendar","countLabel":"releases",
+"highlights":[{"day":2,"count":1},{"day":6,"count":3},{"day":8,"count":2},{"day":13,"count":4},{"day":15,"count":2},{"day":20,"count":5},{"day":22,"count":1},{"day":27,"count":3},{"day":29,"count":2}]}/*END*/;</script>
+<script src="../runtime.js"></script><script src="../characters.js"></script>
+<script>
+const { W, H, U, vertical, ease, seg, lerp, clamp, accent } = Scene;
+const DEF = { month: "October", year: 2026, firstWeekday: 4, days: 31, title: "Release calendar", countLabel: "releases", highlights: [] };
+const P = Object.assign({}, DEF, Scene.P);
+const fw = ((+P.firstWeekday % 7) + 7) % 7, days = Math.max(28, Math.min(31, +P.days || 31)), weeks = Math.ceil((fw + days) / 7), D = Scene.D;
+const hl = (P.highlights || []).filter((h) => h.day >= 1 && h.day <= days).slice().sort((a, b) => a.day - b.day);
+const hmap = {}; hl.forEach((h, i) => (hmap[h.day] = { i, count: h.count }));
+const WD = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((s) => (vertical ? s[0] + s[1] : s));
+const L = vertical
+  ? { titleY: 28, eyebrowFs: 12, monthFs: 44, cntY: 150, cntFs: 40, cntLabFs: 15, gx: 16, gy: 244, gw: W - 32, gap: 4, wdFs: 11, dayFs: 12, pillFs: 12, gh: H - 244 - 30, wdH: 24 }
+  : { titleY: 70, eyebrowFs: 18, monthFs: 84, cntY: 350, cntFs: 120, cntLabFs: 26, gx: 560, gy: 70, gw: W - 560 - 80, gap: 8, wdFs: 18, dayFs: 19, pillFs: 19, gh: H - 70 - 60, wdH: 40 };
+const cw = (L.gw - L.gap * 6) / 7, ch = Math.min(vertical ? 90 : 118, (L.gh - L.wdH - L.gap * weeks) / weeks);
+const total = hl.reduce((s, h) => s + (h.count || 1), 0);
+const T0 = 0.14, T1 = 0.78, step = hl.length > 1 ? (T1 - T0) / (hl.length - 1) : 0, PD = 0.07;
+let refs = {}; const cells = [];
+Scene.define({
+  setup(S) {
+    const st = S.stage, c = Scene.el("canvas", { width: W, height: H }, st); refs.cv = c.getContext("2d");
+    const al = vertical ? "center" : "left", lx = vertical ? "left:0;right:0" : "left:80px;width:440px";
+    refs.eyebrow = Scene.el("div", { text: P.title, style: "position:absolute;" + lx + ";top:" + L.titleY + "px;text-align:" + al + ";font-size:" + L.eyebrowFs + "px;letter-spacing:.18em;text-transform:uppercase;color:" + accent + ";font-weight:600" }, st);
+    refs.month = Scene.el("div", { class: "serif", style: "position:absolute;" + lx + ";top:" + (L.titleY + L.eyebrowFs * 2) + "px;text-align:" + al + ";font-weight:700;font-size:" + L.monthFs + "px;line-height:1.05" }, st);
+    refs.month.innerHTML = P.month + " <span style='color:#a9aecb;font-weight:400'>" + P.year + "</span>";
+    refs.cnt = Scene.el("div", { style: "position:absolute;" + lx + ";top:" + L.cntY + "px;text-align:" + al }, st);
+    refs.cntNum = Scene.el("div", { class: "serif", text: "0", style: "font-weight:700;font-size:" + L.cntFs + "px;line-height:1;color:" + accent }, refs.cnt);
+    Scene.el("div", { text: P.countLabel, style: "font-size:" + L.cntLabFs + "px;letter-spacing:.12em;text-transform:uppercase;color:#a9aecb;margin-top:6px" }, refs.cnt);
+    refs.wd = WD.map((s, i) => Scene.el("div", { text: s, style: "position:absolute;left:" + (L.gx + i * (cw + L.gap)) + "px;width:" + cw + "px;top:" + L.gy + "px;height:" + L.wdH + "px;display:flex;align-items:center;justify-content:center;font-size:" + L.wdFs + "px;letter-spacing:.1em;text-transform:uppercase;color:#777a93" }, st));
+    for (let d = 1; d <= days; d++) {
+      const idx = fw + d - 1, col = idx % 7, row = Math.floor(idx / 7), x = L.gx + col * (cw + L.gap), y = L.gy + L.wdH + row * (ch + L.gap);
+      const box = Scene.el("div", { style: "position:absolute;left:" + x + "px;top:" + y + "px;width:" + cw + "px;height:" + ch + "px;border-radius:" + (vertical ? 8 : 12) + "px;background:#171a30;border:1px solid #282b47" }, st);
+      const num = Scene.el("div", { text: d, style: "position:absolute;left:" + (vertical ? 6 : 12) + "px;top:" + (vertical ? 4 : 8) + "px;font-size:" + L.dayFs + "px;color:#a9aecb" }, box);
+      let pill = null;
+      if (hmap[d]) {
+        const c = hmap[d].count;
+        pill = Scene.el("div", { text: c ? c : "", style: c
+          ? "position:absolute;left:50%;bottom:" + (vertical ? 6 : 12) + "px;margin-left:-" + (vertical ? 13 : 22) + "px;width:" + (vertical ? 26 : 44) + "px;height:" + (vertical ? 20 : 30) + "px;border-radius:999px;background:" + accent + ";color:#0f1120;font-weight:700;font-size:" + L.pillFs + "px;display:flex;align-items:center;justify-content:center"
+          : "position:absolute;left:50%;bottom:" + (vertical ? 9 : 16) + "px;margin-left:-" + (vertical ? 6 : 8) + "px;width:" + (vertical ? 12 : 16) + "px;height:" + (vertical ? 12 : 16) + "px;border-radius:50%;background:" + accent }, box);
+      }
+      cells.push({ box, num, pill, d });
+    }
+  },
+  render(t) {
+    Scene.field(refs.cv, t, { n: vertical ? 50 : 90, alpha: 0.4 * seg(t, 0, 1.0) });
+    const tt = t / D;
+    const o = ease.out(seg(tt, 0, 0.07));
+    [refs.eyebrow, refs.month, refs.cnt].forEach((e, i) => { const k = ease.out(seg(tt, 0.01 + 0.02 * i, 0.07)); e.style.opacity = k; e.style.transform = "translateY(" + 14 * U * (1 - k) + "px)"; });
+    refs.wd.forEach((e, i) => (e.style.opacity = ease.out(seg(tt, 0.02 + 0.006 * i, 0.06))));
+    let sum = 0;
+    cells.forEach((c) => {
+      const idx = fw + c.d - 1, col = idx % 7, row = Math.floor(idx / 7);
+      const ci = ease.out(seg(tt, 0.03 + 0.005 * (row + col), 0.07));
+      c.box.style.opacity = ci;
+      const h = hmap[c.d];
+      if (h) {
+        const k = seg(tt, T0 + step * h.i, PD), b = ease.back(k), e = ease.out(k);
+        c.box.style.background = "rgba(124,92,255," + 0.13 * e + ")"; c.box.style.borderColor = e > 0 ? "rgba(124,92,255," + (0.15 + 0.7 * e) + ")" : "#282b47";
+        c.box.style.boxShadow = "0 0 " + 22 * Math.sin(clamp(k) * Math.PI) + "px rgba(124,92,255," + 0.45 * Math.sin(clamp(k) * Math.PI) + ")";
+        c.num.style.color = e > 0.5 ? "#f4f5fb" : "#a9aecb";
+        c.pill.style.opacity = clamp(b * 2); c.pill.style.transform = "scale(" + (0.3 + 0.7 * b) + ")";
+        sum += (h.count ? c.pill && hl[h.i].count : 1) * e;
+      }
+    });
+    refs.cntNum.textContent = Math.round(sum).toLocaleString("en-US");
+  },
+});
+</script></body></html>

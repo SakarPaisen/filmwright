@@ -1,0 +1,28 @@
+# filmwright project file for the demo-mode example. From this folder:
+#   filmwright build                                  (records, narrates and exports)
+mode: demo
+title: "Acme Tasks, a quick tour"
+brand: example
+
+voice:
+  type: preset            # `system` works on any machine without a model download
+  speaker: ryan
+  style: "Warm, friendly and slightly upbeat. Even pace."
+talking_head:
+  enabled: true
+  character: maya
+  corner: bottom-right
+music:
+  mood: upbeat
+  sync_to_scenes: true
+captions:
+  burn_in: false
+outputs: [hd, vertical, square, gif]
+disclosure: metadata
+checks:
+  tool_names: warn
+
+demo:
+  scenarios: scenarios.yaml
+  video: video.yaml
+  serve: {dir: app, port: 8765}     # filmwright build serves the sample app on localhost while it records

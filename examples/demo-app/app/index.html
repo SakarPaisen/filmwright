@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Acme Tasks</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="top">
+    <div class="brand"><span class="mark" aria-hidden="true">A</span> Acme Tasks</div>
+    <nav class="tabs" role="tablist" aria-label="Filter tasks">
+      <button role="tab" aria-selected="true" data-filter="all">All</button>
+      <button role="tab" aria-selected="false" data-filter="open">Open</button>
+      <button role="tab" aria-selected="false" data-filter="done">Done</button>
+    </nav>
+  </header>
+  <main>
+    <section class="board">
+      <h1>This week</h1>
+      <p class="sub">Sample data. Acme is a fictional company.</p>
+      <form id="add" class="add" autocomplete="off">
+        <label for="title" class="sr">New task</label>
+        <input id="title" name="title" placeholder="Add a task…" required>
+        <label for="owner" class="sr">Owner</label>
+        <select id="owner" name="owner">
+          <option>Maya</option><option>Raj</option><option>Lee</option><option>Jo</option>
+        </select>
+        <button type="submit">Add task</button>
+      </form>
+      <ul id="list" class="list" aria-live="polite"></ul>
+      <p class="count" data-testid="count"></p>
+    </section>
+  </main>
+  <div id="toast" class="toast" role="status" hidden></div>
+  <script src="app.js"></script>
+</body>
+</html>

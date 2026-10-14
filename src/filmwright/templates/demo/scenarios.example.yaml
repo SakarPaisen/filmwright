@@ -1,0 +1,68 @@
+# Copy next to your reel.yaml as scenarios.yaml and edit. Step language: docs/scenario-dsl.md
+# Scenarios run in order, each in a fresh browser. If any of them change data, reset your test data before every
+# pass and start state-sensitive scenarios with an `api` precondition.
+name: <feature name>
+base_url: http://localhost:3000              # a test environment: localhost, a dev/staging/sandbox host, or one you allow below
+allow_hosts: [localhost]                     # needed when the host name has no dev/staging/sandbox/localhost in it
+auth:
+  storage_state: auth.json                   # written by `python -m filmwright.demo.login` (omit the auth block for a public app)
+  token_js: "localStorage.getItem('auth_token')"   # optional: a bearer token for `api` steps
+viewport: {width: 1440, height: 810}         # 16:9 CSS px; the layout the app sees
+recording:                                   # docs/film.md
+  resolution: 4k                             # captured at 3× pixel density → sharp 4K
+  pace: 0.8                                  # seconds of stillness after each visible action (raise for calmer)
+  cursor: true                               # a pointer glides to each target
+  # color_scheme: dark                       # the page's prefers-color-scheme, for apps that style by the system setting
+  # redact: ["[data-testid=contact-email]", ".phone"]   # blur private data while recording
+slow_mo: 100
+default_timeout: 25
+vars:
+  record_id: <id of a seeded record>         # use as {{record_id}} in any step
+
+scenarios:
+  - id: S01
+    area: <screen>
+    title: <happy path, in the user's words>
+    expected: <what should be on screen, quoting the UI text>
+    steps:
+      - api:
+          note: precondition, fail loudly if the test data isn't in its starting state
+          path: /api/<endpoint>/{{record_id}}
+          expect: [{path: data.id, equals: "{{record_id}}"}]
+      - goto: /records/{{record_id}}
+      - expect_text: {testid: <banner-testid>, contains: "<text the feature shows>"}
+      - pause: 2                             # let viewers read it
+      - click: {role: button, name: "<button label>"}
+      - wait_for: {text: "<toast title>"}
+      - api:
+          note: prove the backend changed, not just the screen
+          path: /api/<endpoint>/{{record_id}}
+          expect: [{path: data.<field>, equals: "<new value>"}]
+
+  - id: S02
+    area: <screen>
+    title: <edge case the code handles explicitly>
+    expected: <…>
+    steps:
+      - goto: /records
+      - wait_for: {text: "<list heading>"}
+      - check: {role: checkbox, name: "Select <record>"}
+      - click: {role: button, name: "Assign", exact: true}
+      - click: {role: combobox, within: {role: dialog}}
+      - type: {placeholder: "Search teammates…", value: "<name>"}
+      - click: {role: option, name: "<name>"}
+      - pause: 2
+
+  - id: S03
+    area: <screen>
+    title: Control, a case where the feature should show nothing
+    expected: <no banner / no chip>
+    steps:
+      - goto: /records/<id of an unaffected record>
+      - expect_hidden: {testid: <banner-testid>}
+
+  - id: S04
+    area: Roles
+    title: <what another role sees>
+    expected: <…>
+    skip: needs a login for that role on this environment; covered by <unit test file>

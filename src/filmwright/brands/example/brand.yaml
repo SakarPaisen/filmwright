@@ -1,0 +1,52 @@
+# The bundled example brand: "Acme", a fictional company. Copy this folder (brand.yaml + logo.png), change the values,
+# and point a project at it with `brand: path/to/folder`. docs/brands.md explains every field.
+name: Acme
+wordmark: {pre: "ACME", accent: ""}       # the name under the logo on the intro and outro; `accent` is drawn in the accent colour
+logo: logo.png                            # square icon mark next to this file (transparent corners or its own shape)
+logo_radius: 0.22                         # corner rounding of the logo tile (0 for a logo that already has its own shape)
+native: true                              # the scene templates are drawn in this palette, so nothing is recoloured
+
+colors:                                   # the product's palette (hex). The animated scenes are recoloured from these.
+  bg: "#0f1222"                           # page / scene background (darkest)
+  bg2: "#171a30"                          # panels
+  card: "#22264a"                         # raised cards
+  line: "#343a6b"                         # outlines and rules
+  ink: "#f4f5fb"                          # main text
+  muted: "#a9aecb"                        # secondary text
+  accent: "#7c5cff"                       # the one highlight colour
+  on_accent: "#ffffff"                    # text drawn on the accent colour
+themes:                                   # per-episode accent: a spec says `theme: <name>`; default is `main`
+  main: "#7c5cff"
+  alt: "#22c55e"
+  warm: "#ff8a4c"
+fonts:
+  headline: '"IBM Plex Sans", system-ui, sans-serif'   # scene headlines (the bundled font is SIL OFL); a serif stack also works
+
+site:                                     # where the recorded app lives
+  read_only: true                         # set false only for a sandbox or demo workspace where changes are fine
+  base_url: http://localhost:8765         # examples/demo-app serves the sample app here
+  allow_hosts: [localhost]                # hosts the runner may visit (test environments only by default)
+  public_url: acme.example                # shown on the outro button
+auth:
+  mode: none                              # none | chrome-session | login-py
+  token_js: ""                            # JS that returns the bearer token (for `api` steps), e.g. "localStorage.getItem('auth_token')"
+  token_key: auth_token                   # the localStorage key holding the session (read only for its expiry when it is a JWT)
+  strip_keys: []                          # localStorage keys (globs ok) removed from the saved session, e.g. ["lastEmail"]
+  chrome_host: ""                         # chrome-session: host substring of the signed-in Chrome tab
+  account_check: null                     # {path: /api/me, field: plan, equals: pro}: checked before every recording
+redact: []                                # CSS selectors blurred while recording (account name, email, avatar...)
+host:                                     # the animated presenter
+  preset: leo                             # leo | leo-light | leo-stubble | sam | ana | lee | maya | raj | kit | jo
+  shirt: "#7c5cff"                        # optional brand-coloured shirt (and shirt2 for the shadow tone)
+  shirt2: "#5b3fd9"
+outro:
+  tagline: "Plan less. Ship more."
+  footer: "Sample data. Acme is a fictional company."
+captions:
+  disclaimer: ""                          # appended to every social caption file
+narration_rules: ""                       # optional path to your own notes on what narration must never say or show
+music: {mood: upbeat}
+effects: {sfx: true, jingle: false, verified_badges: false, callouts: true}   # switch off what you don't want in a series
+voice: {}                                 # optional voice overrides, e.g. {style: "Warm and upbeat"}
+wordmark_css: "letter-spacing:.18em;font-weight:600"
+wordmark_accent_weight: 600

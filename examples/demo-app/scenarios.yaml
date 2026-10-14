@@ -1,0 +1,54 @@
+# The Acme Tasks sample app (app/, served locally). Run from this folder:
+#   python -m http.server 8765 --directory app &
+#   python -m filmwright.demo.run_scenarios scenarios.yaml
+name: Acme Tasks, a quick tour
+base_url: http://localhost:8765
+allow_hosts: [localhost]
+viewport: {width: 1440, height: 810}
+recording:
+  resolution: 1080p          # 4k for a sharp master; 1080p keeps the example fast
+  pace: 0.8
+  cursor: true
+  color_scheme: dark
+slow_mo: 80
+default_timeout: 15
+
+scenarios:
+  - id: S01
+    area: Board
+    title: See this week's tasks
+    expected: Three sample tasks and the open/done count
+    steps:
+      - goto: /
+      - expect_count: {testid: task, count: 3}
+      - expect_text: {testid: count, contains: "2 open"}
+      - api:
+          note: the sample API agrees with the screen
+          path: /api/tasks.json
+          expect: [{path: count, equals: 3}]
+      - pause: 1.5
+
+  - id: S02
+    area: Board
+    title: Add a task and give it an owner
+    expected: The new task appears with its owner and a "Task added" toast
+    steps:
+      - goto: /
+      - type: {placeholder: "Add a task…", value: "Write the release notes"}
+      - select: {label: "Owner", option: "Jo"}
+      - click: {role: button, name: "Add task"}
+      - wait_for: {text: "Task added"}
+      - expect_count: {testid: task, count: 4}
+      - pause: 1.2
+
+  - id: S03
+    area: Board
+    title: Finish a task and filter to what's left
+    expected: The task is struck through, then the Open tab hides it
+    steps:
+      - goto: /
+      - check: {role: checkbox, name: "Done: Book the team retro"}
+      - wait_for: {text: "Nice work. Task done."}
+      - click: {role: tab, name: "Open"}
+      - expect_count: {testid: task, count: 1}
+      - pause: 1.5

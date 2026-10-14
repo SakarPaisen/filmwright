@@ -1,0 +1,11 @@
+# Animated scenes around a recording of the product, in one narrated film.
+#   python examples/both/make_sample_clip.py      # makes recordings/inbox.mp4 (or use your own demo recordings)
+#   filmwright build examples/both
+mode: both
+title: Acme Tasks in one minute
+both: {film: film.yaml}
+voice: {type: preset, speaker: ryan}
+talking_head: {enabled: true, character: leo, corner: bottom-right}
+music: {mood: upbeat}
+outputs: [hd, vertical]
+disclosure: metadata

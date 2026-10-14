@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+dist/
+build/
+.pytest_cache/
+.ruff_cache/
+
+# Runs and media: never commit sessions, recordings or renders
+runs/
+out/
+.tts-cache/
+.filmwright/
+auth.json
+*.session.json
+voice/sample*.wav
+voice/consent*.json
+*.mp4
+*.mov
+*.mkv
+*.webm
+*.m4a
+*.wav
+!src/filmwright/assets/**/*.wav
+
+# OS / editors
+.DS_Store
+.idea/
+.vscode/
+
+# sample recordings made by examples/both/make_sample_clip.py
+examples/both/recordings/

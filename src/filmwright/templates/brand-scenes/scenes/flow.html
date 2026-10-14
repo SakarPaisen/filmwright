@@ -1,0 +1,83 @@
+<!doctype html>
+<!-- Flow: glow dots flow from one source node along curved paths to 4-6 target rows; each bar fills in proportion to its value
+     and a counter counts up.
+     PARAMS: {source:string (default "Requests"), targets:[{label,value}] (default Support/Sales/Billing/Product; 2-6 used),
+              unit:string prefix for the counter (default ""; values shown compact, 48000 -> 48K; "$" gives $48K),
+              title:string (default "Where requests go"), theme:"main|alt|warm"}
+     Pure function of time (see ../runtime.js). -->
+<html><head><meta charset="utf-8"></head><body>
+<script>window.PARAMS = /*PARAMS*/{"source":"Requests","targets":[{"label":"Support","value":48000},{"label":"Sales","value":36000},{"label":"Billing","value":27000},{"label":"Product","value":19000}],"unit":"","title":"Where requests go","theme":"main"}/*END*/;</script>
+<script src="../runtime.js"></script>
+<script>
+const { W, H, U, vertical, P, ease, seg, lerp, clamp, accent, D } = Scene;
+const ACC = "#7c5cff";
+const targets = ((P.targets && P.targets.length ? P.targets : [{ label: "Support", value: 48 }, { label: "Product", value: 36 }, { label: "Operations", value: 27 }, { label: "Marketing", value: 19 }])).slice(0, 6);
+const n = targets.length, unit = P.unit == null ? "" : P.unit, source = P.source || "Requests", title = P.title || "Where requests go";
+const vmax = Math.max.apply(null, targets.map((x) => +x.value || 0)) || 1;
+const fmt = (v) => { const a = Math.abs(v), f = (x, s) => (x >= 100 ? Math.round(x) : x >= 10 ? Math.round(x * 10) / 10 : Math.round(x * 100) / 100) + s; return unit + (a >= 1e9 ? f(v / 1e9, "B") : a >= 1e6 ? f(v / 1e6, "M") : a >= 1e4 ? f(v / 1e3, "K") : Math.round(v).toLocaleString("en-US")); };
+const bez = (p0, c1, c2, p1, u) => { const m = 1 - u; return [0, 1].map((i) => m * m * m * p0[i] + 3 * m * m * u * c1[i] + 3 * m * u * u * c2[i] + u * u * u * p1[i]); };
+// ---- geometry
+const SRC = vertical ? [0.5 * W, 0.2 * H] : [0.15 * W, 0.5 * H], SR = (vertical ? 34 : 64) * U;
+const y0 = vertical ? 0.4 * H : 0.27 * H, y1 = vertical ? 0.92 * H : 0.88 * H, rowH = (y1 - y0) / n;
+const rows = targets.map((_, i) => ({ y: y0 + rowH * (i + 0.5) }));
+const NX = vertical ? 0.07 * W : 0.46 * W;
+const nodes = rows.map((r) => [NX, r.y]);
+const c1 = (N) => vertical ? [lerp(SRC[0], N[0], 0.9), SRC[1]] : [SRC[0] + 0.18 * W, SRC[1]];
+const c2 = (N) => vertical ? [N[0], lerp(SRC[1], N[1], 0.35)] : [N[0] - 0.14 * W, N[1]];
+const pathD = (i) => "M" + SRC + " C" + c1(nodes[i]) + " " + c2(nodes[i]) + " " + nodes[i];
+const SPEED = 0.5, NDOT = (i) => 8 + Math.round(6 * (+targets[i].value || 0) / vmax);
+const t0 = (i) => (0.12 + 0.035 * i) * D, tFill = (i) => t0(i) + 0.9 / SPEED;
+const FILLD = 0.3 * D;
+const track = vertical ? { x: 0.14 * W, w: 0.5 * W, h: 10 * U } : { x: 0.66 * W, w: 0.2 * W, h: 16 * U };
+let R = {};
+Scene.define({
+  setup(st) {
+    const bg = Scene.el("canvas", { width: W, height: H }, st.stage); R.bg = bg.getContext("2d");
+    const sv = Scene.svg("svg", { width: W, height: H, style: "position:absolute;left:0;top:0" }, st.stage);
+    R.lanes = targets.map((_, i) => Scene.svg("path", { d: pathD(i), fill: "none", stroke: ACC, "stroke-width": 1.8 * U, "stroke-linecap": "round", opacity: 0 }, sv));
+    R.cv = Scene.el("canvas", { width: W, height: H }, st.stage).getContext("2d");
+    R.title = Scene.el("div", { class: "serif", text: title, style: "position:absolute;left:" + 24 * U + "px;right:" + 24 * U + "px;text-align:center;top:" + (vertical ? 34 : 52) * U + "px;font-weight:700;line-height:1.1;font-size:" + (vertical ? 30 : 46) * U + "px" }, st.stage);
+    R.src = Scene.el("div", { style: "position:absolute;left:" + (SRC[0] - SR) + "px;top:" + (SRC[1] - SR) + "px;width:" + 2 * SR + "px;height:" + 2 * SR + "px;border-radius:50%;background:#171a30;border:2px solid " + ACC + ";opacity:0" }, st.stage);
+    Scene.el("div", { style: "position:absolute;inset:" + SR * 0.3 + "px;border-radius:50%;background:radial-gradient(circle,rgba(124,92,255,.55),rgba(124,92,255,.05) 70%)" }, R.src);
+    R.srcl = Scene.el("div", { text: source, style: "position:absolute;width:" + 220 * U + "px;text-align:center;left:" + (SRC[0] - 110 * U) + "px;top:" + (SRC[1] + SR + 12 * U) + "px;font-weight:600;font-size:" + (vertical ? 15 : 26) * U + "px;opacity:0" }, st.stage);
+    R.row = targets.map((tg, i) => {
+      const y = rows[i].y, o = {};
+      o.node = Scene.el("div", { style: "position:absolute;width:" + 14 * U + "px;height:" + 14 * U + "px;border-radius:50%;background:#171a30;border:2px solid " + ACC + ";left:" + (NX - 7 * U) + "px;top:" + (y - 7 * U) + "px;opacity:0" }, st.stage);
+      const lx = vertical ? track.x : 0.5 * W, ly = vertical ? y - 26 * U : y;
+      o.lab = Scene.el("div", { text: tg.label, style: "position:absolute;left:" + lx + "px;top:" + ly + "px;transform:translateY(-50%);white-space:nowrap;font-weight:500;font-size:" + (vertical ? 15 : 25) * U + "px;opacity:0" }, st.stage);
+      const by = vertical ? y + 4 * U : y;
+      o.track = Scene.el("div", { style: "position:absolute;left:" + track.x + "px;top:" + (by - track.h / 2) + "px;width:" + track.w + "px;height:" + track.h + "px;border-radius:999px;background:#22264a;opacity:0" }, st.stage);
+      o.fill = Scene.el("div", { style: "position:absolute;left:0;top:0;height:100%;width:0;border-radius:999px;background:linear-gradient(90deg,#3f10ff," + ACC + ");box-shadow:0 0 " + 12 * U + "px rgba(124,92,255,.5)" }, o.track);
+      const cx = track.x + track.w + 16 * U;
+      o.num = Scene.el("div", { text: fmt(0), style: "position:absolute;left:" + cx + "px;top:" + by + "px;transform:translateY(-50%);white-space:nowrap;font-weight:700;color:" + ACC + ";font-variant-numeric:tabular-nums;font-size:" + (vertical ? 18 : 28) * U + "px;opacity:0" }, st.stage);
+      return o;
+    });
+  },
+  render(t) {
+    Scene.field(R.bg, t, { n: vertical ? 60 : 110, alpha: 0.4 * seg(t, 0, 1.2) });
+    const tt = ease.out(seg(t, 0.1, 0.8)); R.title.style.opacity = tt; R.title.style.transform = "translateY(" + 14 * U * (1 - tt) + "px)";
+    const sk = ease.back(seg(t, 0.3, 0.8)); R.src.style.opacity = clamp(sk * 1.5); R.src.style.transform = "scale(" + (0.6 + 0.4 * sk) + ")";
+    R.src.style.boxShadow = "0 0 " + (22 + 8 * Math.sin(t * 2)) * U + "px rgba(124,92,255,.35)";
+    R.srcl.style.opacity = ease.out(seg(t, 0.6, 0.7));
+    const c = R.cv; c.clearRect(0, 0, W, H);
+    const gate = 1 - ease.io(seg(t, 0.84 * D, 0.1 * D));
+    targets.forEach((tg, i) => {
+      const r = R.row[i], on = ease.out(seg(t, t0(i) - 0.5, 0.6));
+      R.lanes[i].setAttribute("opacity", 0.22 * on * (0.5 + 0.5 * gate));
+      const a = ease.out(seg(t, t0(i) - 0.4, 0.5)); [r.node, r.lab, r.track, r.num].forEach((e) => (e.style.opacity = a));
+      const f = ease.out(seg(t, tFill(i), FILLD)), v = (+tg.value || 0);
+      r.fill.style.width = (100 * f * v / vmax) + "%"; r.num.textContent = fmt(v * f);
+      const h = (t - t0(i)) * SPEED, nd = NDOT(i);
+      for (let j = 0; j < nd; j++) {
+        const o = j / nd; if (h < o) continue;
+        const u = (((h - o) % 1) + 1) % 1, p = bez(SRC, c1(nodes[i]), c2(nodes[i]), nodes[i], ease.io(u) * 0.35 + u * 0.65);
+        c.globalAlpha = Math.min(u / 0.08, 1) * Math.min((1 - u) / 0.08, 1) * gate;
+        if (c.globalAlpha <= 0.01) continue;
+        c.fillStyle = ACC; c.shadowColor = "rgba(124,92,255,.8)"; c.shadowBlur = 9 * U;
+        c.beginPath(); c.arc(p[0], p[1], 4.4 * U, 0, 6.283); c.fill();
+      }
+    });
+    c.globalAlpha = 1; c.shadowBlur = 0;
+  },
+});
+</script></body></html>

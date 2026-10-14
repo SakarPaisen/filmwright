@@ -1,0 +1,60 @@
+# video.yaml: the film for demo mode. `filmwright build` writes one for you from reel.yaml; for a branded, numbered
+# series (animated intro and outro, feature scenes, social cuts) use `python -m filmwright.series.mkepisode` (docs/series.md).
+# Hand-write this file for full control. Paths are relative to this file.
+output: <slug>-walkthrough                   # -> <slug>-walkthrough.mp4 / .srt / -voiceover.m4a
+# resolution: 4k                             # default: the best the clips support (4K from a 3x capture)
+music: {mood: calm, sync_to_scenes: false}   # a quiet bed ducked under the voice; sync_to_scenes: true scores the section cuts (docs/film.md)
+presenter: {style: leo, height: 0.25}        # the talking-head host. A brand tee: {style: {preset: leo, shirt: "#7c5cff", shirt2: "#5b3fd9"}}. Remove for no host.
+sfx: true                                    # soft click / whoosh / pop, synthesised; false for none
+transition: {type: smoothleft, duration: 0.6}  # or cut (default), dissolve, wipeleft, circleopen ...
+voice:                                       # same fields as reel.yaml (docs/voice.md)
+  type: preset                               # preset | described | clone | system
+  speaker: ryan
+  style: "Natural, relaxed and conversational, like a friendly colleague explaining something. Even pace, no dramatic emphasis."
+# Other voices:
+#   {type: described, description: "Calm, friendly narrator in her forties, American accent"}
+#   {type: clone, sample: voice/sample.wav}   # your own voice, with a consent record (docs/voice.md)
+#   {type: system}                            # espeak-ng: no download, robotic, works everywhere
+checks: {tool_names: warn}                   # off | warn | block: flag film text that names production tools
+
+title_card:                                  # the plain card style; mkepisode uses animated brand scenes instead
+  eyebrow: <release or ticket>
+  title: <feature name>
+  subtitle: <one line on what it changes for the user>
+  footer: <environment> · <date>
+intro: >-
+  <Two or three sentences: the problem the user had, and what this walkthrough shows.>
+
+sections:                                    # one per recorded scenario worth showing, in viewing order
+  - explainer: explainers/<idea>.html        # optional: an animated scene for an idea the app doesn't show
+    label: "How it works"                    #   (copy templates/demo/explainer.html, or a scene from templates/brand-scenes/scenes/)
+    text: >-
+      <One or two sentences about the idea.>
+  - clip: videos/S01.mp4
+    label: "1 · <screen>"
+    text: >-
+      <Narration written from what the recording actually shows. Short sentences, spoken numbers
+      ("twenty second", not "22nd"), about 2.5 words per second of clip.>
+    # auto_focus is ON by default: the camera zooms in on each real action (click, hover, typing, scroll). `auto_focus: false` turns it off;
+    # `auto_focus: add` keeps it AND your own `focus:` below. See docs/film.md.
+    focus:                                   # your own zoom on a target; a target that already fills the screen is skipped, so check the log
+      - {box: [100, 330, 1240, 260], at: 13.0, zoom: 1.4, hold: 3.4}     # region in CSS px, seconds into the clip
+    callouts:                                # only when the UI's meaning isn't obvious; `word: "export"` makes it appear as that word is spoken
+      - {target: "<label from videos/S01.events.json>", text: "<five to eight words>", duration: 3}
+  - clip: videos/S02.mp4
+    label: "2 · <screen>"
+    text: >-
+      <...>
+    spotlight:                               # dim everything but a panel or dialog
+      - {target: "<label>", duration: 3}
+  # fit: hold (default for video) freezes the last frame if the narration is longer than the clip;
+  # fit: stretch (default for .gif) spreads the frames over the narration.
+
+closing_card:
+  title: What changed
+  bullets:
+    - <user-facing outcome 1>
+    - <user-facing outcome 2>
+  footer: <release or branch>
+outro: >-
+  <One sentence that sums it up.>

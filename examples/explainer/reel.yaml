@@ -1,0 +1,11 @@
+# Three animated story films for the fictional "Acme Tasks". From the repo root:
+#   filmwright build examples/explainer
+mode: explainer
+title: Acme Tasks stories
+explainer: {format: story, project: .}
+voice: {type: preset, speaker: ryan}      # `system` works on any machine without a model download
+talking_head: {enabled: false}
+music: {mood: upbeat}
+captions: {burn_in: true}
+outputs: [4k, hd, square]
+disclosure: metadata

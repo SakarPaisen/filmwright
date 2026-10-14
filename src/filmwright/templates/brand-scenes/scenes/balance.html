@@ -1,0 +1,95 @@
+<!doctype html>
+<!-- Balance scene: a document appears, two lines are marked with a highlighter, then a balance scale weighs one
+     marked option against the other, settles almost level ("weighing both sides"), and a Source chip pops up.
+     Generic and number-free. Pure function of time (see ../runtime.js).
+     PARAMS: {title:string, left:string, right:string, sourceLabel:string, showCharacter:boolean}
+     Defaults: title "Weighing both sides", left "The quick fix", right "The careful fix", sourceLabel "Source",
+               showCharacter true. -->
+<html><head><meta charset="utf-8"></head><body>
+<script>window.PARAMS = /*PARAMS*/{"title":"Weighing both sides","left":"The quick fix","right":"The careful fix","sourceLabel":"Source","showCharacter":true,"theme":"main"}/*END*/;</script>
+<script src="../runtime.js"></script><script src="../characters.js"></script>
+<script>
+const { W, H, U, vertical, P, ease, seg, lerp, clamp, accent, rnd, D } = Scene;
+const title = P.title != null ? P.title : "Weighing both sides", leftText = P.left || "The quick fix", rightText = P.right || "The careful fix", srcLabel = P.sourceLabel || "Source";
+const showChar = P.showCharacter !== false;
+const L = vertical
+  ? { titleY: 22, titleFs: 22, doc: { x: 40, y: 78, w: 350, h: 262 }, lineH: 9, lineGap: 31, scale: { cx: W / 2, py: 400, b: 104, post: 190 }, cardW: 118, cardH: 58, cardFs: 12, hang: 74, chipFs: 12, chipH: 22, ground: 748, csc: 0.5, charX: 372, srcFs: 12 }
+  : { titleY: 30, titleFs: 40, doc: { x: 90, y: 130, w: 470, h: 560 }, lineH: 16, lineGap: 66, scale: { cx: W * 0.69, py: 300, b: 215, post: 330 }, cardW: 230, cardH: 100, cardFs: 21, hang: 130, chipFs: 20, chipH: 36, ground: 735, csc: 1, charX: W * 0.93, srcFs: 20 };
+const widths = [0.9, 0.56, 0.84, 0.74, 0.6, 0.88, 0.5], HL = [1, 4], NL = 7;
+const tHL = [0.14 * D, 0.26 * D], tCardL = 0.50 * D, tCardR = 0.60 * D, tScale = 0.38 * D, tSrc = 0.74 * D;
+const Sc = L.scale, d = L.doc;
+const step = (s) => (s <= 0 ? 0 : 1 - Math.exp(-3.2 * s) * Math.cos(7.5 * s));
+const angle = (t) => -9 * step(t - tCardL) + 6.6 * step(t - tCardR);   // degrees, +ve = right side down
+const lineY = (i) => d.y + (vertical ? 56 : 92) + i * L.lineGap;
+const ends = (t) => { const a = angle(t) * Math.PI / 180, bx = Sc.b * Math.cos(a), by = Sc.b * Math.sin(a);
+  return { l: [Sc.cx - bx, Sc.py - by], r: [Sc.cx + bx, Sc.py + by], a }; };
+let R = {}, ch;
+Scene.define({
+  setup(S) {
+    const st = S.stage;
+    R.cv = Scene.el("canvas", { width: W, height: H }, st).getContext("2d");
+    R.title = Scene.el("div", { class: "serif", text: title, style: `position:absolute;left:${24 * U}px;right:${24 * U}px;top:${L.titleY}px;text-align:center;font-weight:700;font-size:${L.titleFs}px;line-height:1.1` }, st);
+    R.doc = Scene.el("div", { style: `position:absolute;left:${d.x}px;top:${d.y}px;width:${d.w}px;height:${d.h}px;border-radius:${vertical ? 10 : 16}px;background:#f3f1ea;box-shadow:0 20px 60px rgba(0,0,0,.45)` }, st);
+    const pad = vertical ? 22 : 36;
+    Scene.el("div", { style: `position:absolute;left:${pad}px;top:${vertical ? 20 : 34}px;width:${d.w * 0.4}px;height:${vertical ? 12 : 20}px;border-radius:99px;background:#9fa2b3` }, R.doc);
+    R.hl = []; R.bars = [];
+    for (let i = 0; i < NL; i++) {
+      const y = lineY(i) - d.y, w = (d.w - pad * 2) * widths[i], hh = L.lineH;
+      const k = HL.indexOf(i);
+      if (k >= 0) R.hl.push(Scene.el("div", { style: `position:absolute;left:${pad - 6}px;top:${y - hh * 0.9}px;width:${w + 12}px;height:${hh * 1.8}px;border-radius:${hh * 0.5}px;background:${accent};opacity:.85;transform-origin:left;transform:scaleX(0)` }, R.doc));
+      R.bars.push(Scene.el("div", { style: `position:absolute;left:${pad}px;top:${y - hh / 2}px;width:${w}px;height:${hh}px;border-radius:99px;background:#bfc1cd` }, R.doc));
+    }
+    // scale svg
+    const sv = Scene.svg("svg", { width: W, height: H, style: "position:absolute;left:0;top:0" }, st); R.sv = sv;
+    R.g = Scene.svg("g", {}, sv);
+    const sw = vertical ? 4 : 7;
+    Scene.svg("path", { d: `M${Sc.cx - 50 * (vertical ? .6 : 1)} ${Sc.py + Sc.post} L${Sc.cx + 50 * (vertical ? .6 : 1)} ${Sc.py + Sc.post}`, stroke: "#54597b", "stroke-width": sw * 1.4, "stroke-linecap": "round" }, R.g);
+    Scene.svg("line", { x1: Sc.cx, y1: Sc.py, x2: Sc.cx, y2: Sc.py + Sc.post, stroke: "#54597b", "stroke-width": sw, "stroke-linecap": "round" }, R.g);
+    R.beam = Scene.svg("line", { stroke: "#c9d4e4", "stroke-width": sw, "stroke-linecap": "round" }, R.g);
+    Scene.svg("circle", { cx: Sc.cx, cy: Sc.py, r: sw * 1.6, fill: accent }, R.g);
+    R.strL = [0, 1].map(() => Scene.svg("line", { stroke: "#777c9e", "stroke-width": sw * 0.35 }, R.g));
+    R.strR = [0, 1].map(() => Scene.svg("line", { stroke: "#777c9e", "stroke-width": sw * 0.35 }, R.g));
+    R.panL = Scene.svg("path", { fill: "#454a6d", stroke: "#777c9e", "stroke-width": 2 }, R.g); R.panR = Scene.svg("path", { fill: "#454a6d", stroke: "#777c9e", "stroke-width": 2 }, R.g);
+    const mkCard = (txt, col) => { const c = Scene.el("div", { style: `position:absolute;left:0;top:0;width:${L.cardW}px;height:${L.cardH}px;border-radius:${vertical ? 8 : 12}px;background:#22264a;border:1.5px solid ${col};display:flex;align-items:center;gap:${vertical ? 6 : 10}px;padding:0 ${vertical ? 8 : 14}px;font-size:${L.cardFs}px;font-weight:600;line-height:1.2;box-shadow:0 8px 24px rgba(0,0,0,.4)` }, st);
+      Scene.el("i", { style: `flex:none;display:block;width:${vertical ? 8 : 14}px;height:${L.cardH * 0.56}px;border-radius:99px;background:${col}` }, c); Scene.el("span", { text: txt }, c); return c; };
+    R.cardL = mkCard(leftText, accent); R.cardR = mkCard(rightText, "#7db4ff");
+    R.src = Scene.el("div", { style: `position:absolute;display:flex;align-items:center;gap:${vertical ? 5 : 8}px;height:${L.chipH}px;padding:0 ${L.chipH * 0.45}px;border-radius:999px;background:#22264a;border:1.5px solid ${accent};color:${accent};font-size:${L.srcFs}px;font-weight:600;white-space:nowrap;box-shadow:0 4px 14px rgba(0,0,0,.35)` }, st);
+    R.src.innerHTML = `<svg width="${L.chipH * 0.45}" height="${L.chipH * 0.45}" viewBox="0 0 12 12" fill="none" stroke="${accent}" stroke-width="1.8" stroke-linecap="round"><path d="M5 2H2v8h8V7M7 1.5h3.5V5M10.5 1.5 5.5 6.5"/></svg>${srcLabel}`;
+    if (showChar) ch = Characters.make("you", st, 3);
+  },
+  render(t) {
+    Scene.field(R.cv, t, { n: vertical ? 50 : 100, alpha: 0.5 * seg(t, 0, 1) });
+    const ti = ease.out(seg(t, 0.1, 0.8)); R.title.style.opacity = ti;
+    const dk = ease.out(seg(t, 0.3, 0.8)); R.doc.style.opacity = dk; R.doc.style.transform = `translateY(${24 * U * (1 - dk)}px)`;
+    R.bars.forEach((b, i) => { const k = ease.out(seg(t, 0.5 + i * 0.07, 0.5)); b.style.opacity = k; b.style.transform = `scaleX(${0.6 + 0.4 * k})`; b.style.transformOrigin = "left"; });
+    R.hl.forEach((h, k) => { const e = ease.io(seg(t, tHL[k], 0.07 * D)); h.style.transform = `scaleX(${e})`; });
+    R.bars.forEach((b, i) => { const k = HL.indexOf(i); if (k >= 0) b.style.background = mixDark(seg(t, tHL[k], 0.07 * D)); });
+    // scale
+    const sk = ease.out(seg(t, tScale, 0.08 * D)); R.g.setAttribute("opacity", sk); R.g.setAttribute("transform", `translate(0 ${16 * U * (1 - sk)})`);
+    const e = ends(t); R.beam.setAttribute("x1", e.l[0]); R.beam.setAttribute("y1", e.l[1]); R.beam.setAttribute("x2", e.r[0]); R.beam.setAttribute("y2", e.r[1]);
+    const pw = L.cardW * 0.62, hang = L.hang;
+    [[e.l, R.strL, R.panL], [e.r, R.strR, R.panR]].forEach(([p, ss, pan]) => {
+      const cy = p[1] + hang;
+      ss[0].setAttribute("x1", p[0]); ss[0].setAttribute("y1", p[1]); ss[0].setAttribute("x2", p[0] - pw); ss[0].setAttribute("y2", cy);
+      ss[1].setAttribute("x1", p[0]); ss[1].setAttribute("y1", p[1]); ss[1].setAttribute("x2", p[0] + pw); ss[1].setAttribute("y2", cy);
+      pan.setAttribute("d", `M${p[0] - pw - 4} ${cy} L${p[0] + pw + 4} ${cy} Q${p[0]} ${cy + hang * 0.5} ${p[0] - pw - 4} ${cy} Z`);
+    });
+    const place = (c, p, s, op) => { c.style.opacity = op; c.style.transform = `translate(${p[0] - L.cardW / 2}px,${p[1] - L.cardH / 2}px) scale(${s})`; };
+    // left card: flies from the second highlighted line to the left pan
+    const fk = ease.io(seg(t, tCardL - 0.09 * D, 0.09 * D)), start = [d.x + d.w * 0.35, lineY(HL[1])], target = [e.l[0], e.l[1] + hang - L.cardH / 2 - 2];
+    const lp = [lerp(start[0], target[0], fk), lerp(start[1], target[1], fk) - Math.sin(fk * Math.PI) * 40 * U];
+    place(R.cardL, lp, lerp(0.5, 1, fk), clamp(seg(t, tCardL - 0.09 * D, 0.03 * D)) * 1);
+    const rk = ease.out(seg(t, tCardR - 0.06 * D, 0.06 * D)), tr = [e.r[0], e.r[1] + hang - L.cardH / 2 - 2];
+    place(R.cardR, [tr[0], tr[1] - 50 * U * (1 - rk)], lerp(0.85, 1, rk), rk);
+    // source chip beside the second highlighted line
+    const ck = ease.back(seg(t, tSrc, 0.05 * D)); const cw = vertical ? 74 : 124, cp = [d.x + d.w * (0.9 * widths[HL[1]] + 0.1) + 8 + (vertical ? 4 : 20), lineY(HL[1])];
+    R.src.style.opacity = clamp(seg(t, tSrc, 0.02 * D) * 4); R.src.style.left = (cp[0] - 0) + "px"; R.src.style.top = (cp[1] - L.chipH / 2) + "px"; R.src.style.transform = `scale(${0.4 + 0.6 * ck})`; R.src.style.transformOrigin = "left center";
+    if (showChar) {
+      const kx = ease.io(seg(t, 0.3 * D, 0.1 * D)), use = ease.io(seg(t, 0.5 * D, 0.1 * D));
+      ch.pose({ t, x: lerp(W + 80 * U, L.charX, kx), y: L.ground, face: -1, scale: L.csc, moving: kx > 0 && kx < 1 ? 1 : 0, walk: kx < 1 ? t : 0, use, look: { x: -0.8, y: 0.2 } });
+      ch.el.style.opacity = seg(t, 0.29 * D, 0.01 * D);
+    }
+  },
+});
+function mixDark(k) { const a = [188, 196, 208], b = [58, 52, 28]; return "rgb(" + a.map((v, i) => Math.round(v + (b[i] - v) * k)).join(",") + ")"; }
+</script></body></html>

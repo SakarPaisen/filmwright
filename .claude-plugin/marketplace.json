@@ -1,0 +1,11 @@
+{
+  "name": "filmwright",
+  "owner": {"name": "Dassjay Labs"},
+  "plugins": [
+    {
+      "name": "filmwright",
+      "source": "./claude-plugin",
+      "description": "Narrated product films: demo walkthroughs, animated explainers, or both."
+    }
+  ]
+}

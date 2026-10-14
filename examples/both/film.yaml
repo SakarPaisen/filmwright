@@ -1,0 +1,41 @@
+# A one-minute hybrid film: animated scenes around a real recording of the product.
+# Everything here is fictional. Make the sample recording first: python examples/both/make_sample_clip.py
+title: Acme Tasks in one minute
+file_prefix: acme-tasks-tour
+wordmark: ACME TASKS
+tagline: Plan less. Do more.
+url: acme-tasks.example
+brand:
+  colors: {bg: "#0f1222", accent: "#7c5cff", alt: "#22c55e", warm: "#ff8a4c", ink: "#f4f5fb"}
+
+voice: {type: preset, speaker: ryan, style: "Natural, warm and upbeat, like a friendly colleague. Clear, even pace."}
+music: {mood: upbeat, level: -14}
+talking_head: {enabled: false, character: leo, corner: bottom-right}
+captions: {burn_in: true}
+outputs: [4k, hd]
+
+segments:
+  - scene: title
+    headline: Meet Acme Tasks
+    sub: Plan less. Do more.
+    say: Meet Acme Tasks, the calm way to plan your team's week.
+  - scene: statement
+    text: "Requests arrive everywhere.\nNow they land in one place."
+    say: Requests arrive from everywhere. Now they all land in one place.
+  - clip: recordings/inbox.mp4
+    trim: [0.5, 7.5]
+    label: acme-tasks.example/inbox
+    zoom: {at: 1.2, scale: 1.45, x: 0.35, y: 0.25, hold: 2.4}
+    say: Add a request in a few words, give it an owner, and tick it off when it's done.
+  - scene: steps
+    title: How a rota gets made
+    items: [Everyone shares their availability, The rules keep it fair, The rota goes out to the team]
+    say: Building a rota takes three steps, and the rules keep it fair for everyone.
+  - scene: stat
+    value: 11
+    suffix: " h"
+    label: saved by a twelve-person team every week
+    say: In our sample team of twelve, that adds up to eleven hours saved every week.
+  - scene: outro
+    cta: Try it free
+    say: Plan less and do more, with Acme Tasks.

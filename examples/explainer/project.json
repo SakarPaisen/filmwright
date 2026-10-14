@@ -1,0 +1,16 @@
+{
+ "product": "Acme Tasks",
+ "wordmark": "ACME TASKS",
+ "tagline": "Plan less. Do more.",
+ "url": "acme-tasks.example",
+ "file_prefix": "acme-tasks",
+ "brand": {"colors": {"bg": "#0f1222", "accent": "#7c5cff", "alt": "#22c55e", "warm": "#ff8a4c", "ink": "#f4f5fb"}},
+ "archetypes": "ABC",
+ "stories_per_palette": 1,
+ "voice": {"type": "preset", "speaker": "ryan", "style": "Natural, warm and upbeat, like a friendly colleague telling a short story. Clear, even pace."},
+ "music": {"mood": "upbeat", "level": -14},
+ "talking_head": {"enabled": false, "character": "leo", "corner": "bottom-right"},
+ "captions": {"burn_in": true},
+ "outputs": ["4k", "hd"],
+ "checks": {"tool_names": "warn"}
+}

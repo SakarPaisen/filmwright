@@ -1,0 +1,17 @@
+name: Bug report
+description: Something doesn't work as documented
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes: {label: What happened, description: "What you ran, what you expected, what you got."}
+    validations: {required: true}
+  - type: textarea
+    id: repro
+    attributes: {label: Steps to reproduce, description: "The reel.yaml (remove anything private) and the command."}
+  - type: textarea
+    id: doctor
+    attributes: {label: filmwright doctor output, render: text}
+  - type: input
+    id: version
+    attributes: {label: Version, placeholder: "filmwright --version"}

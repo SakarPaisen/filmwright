@@ -1,0 +1,1006 @@
+<!doctype html>
+<!-- filmwright story template (MIT). One short character-led film per use case.
+     Inputs (injected before load): window.UC (story + brand config), window.BEATS (narration timing).
+     Output: window.TOTAL, window.SFX, window.renderAt(t), window.READY. -->
+<html><head><meta charset="utf-8">
+<style>
+@font-face{font-family:"Space Grotesk";src:url("../../assets/fonts/SpaceGrotesk-Variable.ttf") format("truetype");font-weight:300 700}
+@font-face{font-family:"IBM Plex Sans";src:url("../../assets/fonts/IBMPlexSans-Regular.ttf") format("truetype");font-weight:400 500}
+@font-face{font-family:"IBM Plex Sans";src:url("../../assets/fonts/IBMPlexSans-SemiBold.ttf") format("truetype");font-weight:600}
+@font-face{font-family:"IBM Plex Sans";src:url("../../assets/fonts/IBMPlexSans-Bold.ttf") format("truetype");font-weight:700}
+@font-face{font-family:"Caveat";src:url("../../assets/fonts/Caveat-Variable.ttf") format("truetype");font-weight:400 700}
+html,body{margin:0;padding:0;width:1920px;height:1080px;overflow:hidden;background:#0f1222}
+svg{display:block}
+</style>
+<script src="../../assets/motion.js"></script>
+<script src="../../assets/vendor/rough.js"></script>
+</head><body>
+<svg id="root" width="1920" height="1080" viewBox="0 0 1920 1080" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="wall" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#EEF1FF"/><stop offset="1" stop-color="#DCE2FA"/></linearGradient>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#93B9F5"/><stop offset="1" stop-color="#DCE9FB"/></linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5"><stop offset="0" class="acc" stop-opacity=".55"/><stop offset=".55" class="acc" stop-opacity=".16"/><stop offset="1" class="acc" stop-opacity="0"/></radialGradient>
+    <radialGradient id="darkglow" cx="0.5" cy="0.45" r="0.75"><stop offset="0" id="dg0"/><stop offset=".6" id="dg1"/><stop offset="1" id="dg2"/></radialGradient>
+    <filter id="soft" x="-20%" y="-20%" width="140%" height="160%"><feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#10132a" flood-opacity=".18"/></filter>
+    <filter id="softdark" x="-20%" y="-20%" width="140%" height="160%"><feDropShadow dx="0" dy="14" stdDeviation="18" flood-color="#000" flood-opacity=".45"/></filter>
+    <filter id="neon" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <pattern id="dots" width="40" height="40" patternUnits="userSpaceOnUse"><circle id="dotc" cx="2" cy="2" r="1.6" opacity=".55"/></pattern>
+    <pattern id="grid" width="64" height="64" patternUnits="userSpaceOnUse"><path d="M64 0H0V64" fill="none" stroke="#E7E9F0" stroke-width="1.5"/></pattern>
+  </defs>
+  <g id="product"></g>
+  <g id="app"></g>
+  <g id="board"></g>
+  <g id="office"></g>
+  <g id="outro"></g>
+  <g id="fx"></g>
+</svg>
+<script>
+/* ---------- helpers ---------- */
+const NS = "http://www.w3.org/2000/svg";
+const $ = id => document.getElementById(id);
+function S(tag, attrs = {}, parent = null, text = null) {
+  const e = document.createElementNS(NS, tag);
+  for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
+  if (text != null) e.textContent = text;
+  if (parent) parent.appendChild(e);
+  return e;
+}
+let seed = 7;
+function rnd() { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; }
+const hex = h => { h = h.replace("#", ""); if (h.length === 3) h = h.split("").map(c => c + c).join(""); return [0, 2, 4].map(i => parseInt(h.slice(i, i + 2), 16)); };
+const mix = (a, b, k) => { const x = hex(a), y = hex(b); return "#" + x.map((v, i) => Math.round(v + (y[i] - v) * k).toString(16).padStart(2, "0")).join(""); };
+
+/* ---------- config ---------- */
+const UC = window.UC || {};
+const BR = Object.assign({wordmark: "ACME", tagline: "Plan less. Do more.", colors: {}}, UC.brand || {});
+const BC = Object.assign({bg: "#0f1222", accent: "#7c5cff", alt: "#22c55e", warm: "#ff8a4c", ink: "#f4f5fb"}, BR.colors || {});
+const C = {
+  bg: BC.bg, panel: mix(BC.bg, "#ffffff", .045), panel2: mix(BC.bg, "#ffffff", .09), line: mix(BC.bg, BC.accent, .28),
+  accent: BC.accent, accent2: mix(BC.accent, "#ffffff", .28), soft: mix(BC.accent, "#ffffff", .72),
+  alt: BC.alt, warm: BC.warm, sun: "#FFC247", coral: "#FF6B5B", red: "#E5484D", ink: "#1F2533", dark: "#141729",
+  text: BC.ink, muted: mix(BC.ink, BC.bg, .38), paper: "#FFFFFF",
+  skin: UC.skin || "#C98B6B", skin2: UC.skin2 || "#B4785A", hair: UC.hair || "#2A1A16"};
+const SH = UC.shirt || C.accent, SH2 = UC.shirt2 || mix(SH, "#000000", .18);
+const FONT = {disp: "Space Grotesk, Arial, sans-serif", body: "IBM Plex Sans, Arial, sans-serif", hand: "Caveat, cursive"};
+const PILE = Object.assign({label: "Requests this week", count: 240, item: "note"}, UC.pile || {});
+const SETUP = Object.assign({inputs: [["calendar", "Calendars"], ["chat", "Chat"], ["mail", "Email"], ["sheet", "Spreadsheets"], ["upload", "Forms"]],
+  items: [["Team calendar", ["12 people", "3 shifts", "Live"]], ["Requests inbox", ["Sorted", "Owner set", "Due dates"]], ["Rota rules", ["Fair share", "Holidays", "Skills"]]],
+  badge: "Always up to date"}, UC.setup || {});
+const APP = Object.assign({kind: "chat", title: "Team space", request: "Build next week's on-call rota",
+  result: [["Rota ready: 12 people, 21 shifts", "Nobody works two weekends in a row."], ["2 swaps suggested", "Both people already agreed."]],
+  cards: [["Shift rules", "Updated today"], ["Holiday calendar", "3 people away"]],
+  fields: [["Team", "Support"], ["Week", "Next week"], ["Cover", "24/7"]],
+  metrics: [["Tasks done", 128, "+24%"], ["On time", 96, "%"], ["Hours saved", 14, "this week"]],
+  steps: ["Collect availability", "Apply the rota rules", "Balance the weekends", "Share with the team"],
+  button: "Run"}, UC.app || {});
+const PING = Object.assign({from: "Your manager", label: "Need this by 5 pm:", meeting: "Review meeting", meetingTime: "5:00 PM", initials: "MG"}, UC.ping || {});
+const SFX = [];
+const cue = (t, name) => SFX.push([+t.toFixed(3), name]);
+document.querySelectorAll(".acc").forEach(s => s.setAttribute("stop-color", C.accent));
+$("dg0").setAttribute("stop-color", mix(BC.bg, BC.accent, .3)); $("dg1").setAttribute("stop-color", mix(BC.bg, BC.accent, .08)); $("dg2").setAttribute("stop-color", mix(BC.bg, "#000000", .25));
+$("dotc").setAttribute("fill", mix(BC.bg, BC.accent, .45));
+
+/* ---------- beat timing (injected by the renderer; defaults for preview) ---------- */
+const BEATS = window.BEATS || [{key:"meet",start:.5,dur:4.6},{key:"pile",start:5.3,dur:5.2},{key:"cost",start:10.7,dur:3.5},{key:"workaround",start:14.4,dur:5.2},{key:"setup",start:19.9,dur:7},{key:"result",start:27.2,dur:7.3}];
+const B = Object.fromEntries(BEATS.map(b => [b.key, b]));
+const ARCH = UC.arch || "A";
+if (ARCH === "C") {   // before/after: the whiteboard runs in the "before" window, the setup scene in "after"
+  const bf = B.before;
+  B.pile = {key: "pile", start: bf.start, dur: 0};
+  B.cost = {key: "cost", start: bf.start, dur: bf.dur * .45};
+  B.workaround = {key: "workaround", start: bf.start + bf.dur * .45, dur: bf.dur * .55};
+  B.setup = B.after;
+}
+if (!B.meet) B.meet = {key: "meet", start: B.pile.start, dur: 0};
+// the result scene needs about 7.4 s for its payoff (answer, happy avatar, confetti) even when the line is short
+const RD = Math.max(B.result.dur, 7.4);
+const TOTAL = B.result.start + RD + 2.6;
+
+const tl = motion.timeline({paused: true});
+
+/* ---------- the person (head centre cx, cy) ---------- */
+function hairBack(p, cx, cy) {
+  const st = UC.style;
+  if (st === "bun") { S("ellipse", {cx, cy: cy - 36, rx: 96, ry: 90, fill: C.hair}, p); S("circle", {cx, cy: cy - 128, r: 44, fill: C.hair}, p); }
+  if (st === "long") S("path", {d: `M${cx - 100} ${cy - 20} C${cx - 110} ${cy - 120} ${cx + 110} ${cy - 120} ${cx + 100} ${cy - 20} L${cx + 104} ${cy + 140} C${cx + 60} ${cy + 160} ${cx - 60} ${cy + 160} ${cx - 104} ${cy + 140} Z`, fill: C.hair}, p);
+  if (st === "short") S("ellipse", {cx, cy: cy - 34, rx: 88, ry: 78, fill: C.hair}, p);
+  if (st === "curly") for (const [dx, dy, r] of [[-60, -70, 40], [0, -96, 46], [60, -70, 40], [-86, -20, 32], [86, -20, 32], [-34, -100, 34], [34, -100, 34]]) S("circle", {cx: cx + dx, cy: cy + dy, r, fill: C.hair}, p);
+  if (st === "buzz") S("ellipse", {cx, cy: cy - 26, rx: 82, ry: 70, fill: C.hair}, p);
+}
+function hairFront(p, cx, cy) {
+  const st = UC.style, T = (d) => d.replace(/(-?\d+) (-?\d+)/g, (m, x, y) => `${+x + cx} ${+y + cy}`);
+  if (st === "bun" || st === "long") S("path", {d: T("M-80 -28 C-66 -96 30 -114 82 -48 C48 -60 2 -60 -30 -32 C-46 -18 -68 -16 -80 -28 Z"), fill: C.hair}, p);
+  if (st === "short") S("path", {d: T("M-82 -20 C-80 -90 80 -100 84 -24 C60 -54 -20 -66 -82 -20 Z"), fill: C.hair}, p);
+  if (st === "curly") S("path", {d: T("M-74 -30 C-60 -70 60 -70 74 -30 C40 -46 -40 -46 -74 -30 Z"), fill: C.hair}, p);
+  if (st === "buzz") S("path", {d: T("M-78 -24 C-70 -70 70 -70 78 -24 C40 -40 -40 -40 -78 -24 Z"), fill: C.hair, opacity: .9}, p);
+}
+function glasses(p, cx, cy) { if (UC.glasses) for (const dx of [-30, 30]) S("circle", {cx: cx + dx, cy: cy + 10, r: 22, fill: "none", stroke: C.ink, "stroke-width": 5}, p); }
+/* fit a handwritten label to a width (Caveat is about 0.42 em per character) */
+const fitHand = (txt, max, width) => Math.min(max, Math.floor(width / (Math.max(1, txt.length) * .42)));
+
+/* a pile item: sticky note, document, envelope or ticket */
+function pileItem(parent, kind, i) {
+  const d = S("g", {}, parent);
+  if (kind === "doc") {
+    S("rect", {x: -36, y: -46, width: 72, height: 92, rx: 6, fill: "#FFFFFF", stroke: "#CDD3E4", "stroke-width": 2}, d);
+    for (let k = 0; k < 4; k++) S("rect", {x: -24, y: -30 + k * 14, width: k === 0 ? 34 : 48 - (k % 2) * 12, height: 5, rx: 2.5, fill: k === 0 ? C.accent2 : "#D7DCEA"}, d);
+  } else if (kind === "mail") {
+    S("rect", {x: -40, y: -27, width: 80, height: 54, rx: 7, fill: "#FFFFFF", stroke: "#CDD3E4", "stroke-width": 2}, d);
+    S("path", {d: "M-38 -24 L0 6 L38 -24", stroke: C.accent2, "stroke-width": 3, fill: "none"}, d);
+  } else if (kind === "ticket") {
+    S("rect", {x: -42, y: -26, width: 84, height: 52, rx: 8, fill: "#FFFFFF", stroke: "#CDD3E4", "stroke-width": 2}, d);
+    S("circle", {cx: -26, cy: 0, r: 9, fill: [C.warm, C.alt, C.accent2][i % 3]}, d);
+    for (let k = 0; k < 2; k++) S("rect", {x: -10, y: -10 + k * 16, width: 40 - k * 12, height: 6, rx: 3, fill: "#D7DCEA"}, d);
+  } else {   // sticky note
+    const col = ["#FFE08A", "#FFC9B5", "#C8F0D8", "#D9D2FF"][i % 4];
+    S("rect", {x: -38, y: -38, width: 76, height: 76, rx: 4, fill: col, stroke: mix(col, "#000000", .12), "stroke-width": 2}, d);
+    for (let k = 0; k < 3; k++) S("rect", {x: -26, y: -18 + k * 14, width: 52 - (k % 2) * 16, height: 5, rx: 2.5, fill: mix(col, "#000000", .22)}, d);
+  }
+  return d;
+}
+
+/* ================= SCENE 1-2: OFFICE (character + flat 2D) ================= */
+function buildOffice() {
+  const g = $("office");
+  const cam = S("g", {id: "cam"}, g);
+  S("rect", {x: 0, y: 0, width: 1920, height: 1080, fill: "url(#wall)"}, cam);
+  // window with skyline
+  const win = S("g", {}, cam);
+  S("rect", {x: 1230, y: 150, width: 440, height: 380, rx: 18, fill: "#FFFFFF"}, win);
+  S("rect", {x: 1250, y: 170, width: 400, height: 340, rx: 10, fill: "url(#sky)"}, win);
+  const clouds = S("g", {id: "clouds"}, win);
+  for (const [x, y, s] of [[1300, 230, 1], [1500, 270, .8], [1610, 215, .6]]) {
+    const c = S("g", {transform: `translate(${x},${y}) scale(${s})`}, clouds);
+    S("ellipse", {cx: 0, cy: 0, rx: 46, ry: 18, fill: "#FFFFFF", opacity: .9}, c);
+    S("ellipse", {cx: 22, cy: -12, rx: 28, ry: 18, fill: "#FFFFFF", opacity: .9}, c);
+  }
+  const city = [[1260, 400, 60, 110], [1325, 360, 52, 150], [1382, 420, 44, 90], [1430, 330, 70, 180], [1505, 390, 50, 120], [1560, 350, 46, 160], [1610, 410, 40, 100]];
+  for (const [x, y, w, h] of city) S("rect", {x, y, width: w, height: h, fill: "#86A7E8", opacity: .55}, win);
+  S("rect", {x: 1250, y: 336, width: 400, height: 8, fill: "#FFFFFF"}, win);
+  S("rect", {x: 1446, y: 170, width: 8, height: 340, fill: "#FFFFFF"}, win);
+  // shelf with books and a frame
+  const shelf = S("g", {}, cam);
+  S("rect", {x: 250, y: 330, width: 420, height: 14, rx: 7, fill: "#BCC4DE"}, shelf);
+  const books = [[C.accent, 34, 110], [C.sun, 28, 92], [C.alt, 40, 120], [C.coral, 26, 86], [C.accent2, 36, 104]];
+  let bx = 280;
+  for (const [col, w, h] of books) { S("rect", {x: bx, y: 330 - h, width: w, height: h, rx: 5, fill: col}, shelf); bx += w + 8; }
+  S("rect", {x: 540, y: 220, width: 110, height: 110, rx: 10, fill: "#FFFFFF"}, shelf);
+  S("path", {d: "M556 312 L590 262 L612 290 L626 274 L640 312 Z", fill: C.soft}, shelf);
+  S("circle", {cx: 620, cy: 245, r: 10, fill: C.sun}, shelf);
+  // floor
+  S("rect", {x: 0, y: 900, width: 1920, height: 180, fill: "#CBD2EC"}, cam);
+  S("ellipse", {cx: 960, cy: 935, rx: 520, ry: 30, fill: "#B4BEE0"}, cam);
+
+  // stacks of work (grow in scene 2), behind the desk
+  const towers = S("g", {id: "towers"}, cam);
+  const towerDefs = [[250, 900, 150, 430], [420, 900, 120, 300], [1450, 900, 140, 380], [1610, 900, 160, 470]];
+  towerDefs.forEach(([x, base, w, h], i) => {
+    const t = S("g", {class: "tower", "data-h": h}, towers);
+    S("rect", {x, y: base - h, width: w, height: h, rx: 6, fill: "#FFFFFF", filter: "url(#soft)"}, t);
+    for (let yy = base - h + 14; yy < base; yy += 16) S("line", {x1: x + 6, y1: yy, x2: x + w - 6, y2: yy, stroke: "#D6DBEA", "stroke-width": 2}, t);
+    motion.set(t, {scaleY: 0, svgOrigin: `${x + w / 2} ${base}`});
+  });
+
+  // ---- the person ----
+  const person = S("g", {id: "person"}, cam);
+  S("rect", {x: 830, y: 470, width: 260, height: 330, rx: 40, fill: "#1E2338"}, person); // chair back
+  const body = S("g", {id: "pbody"}, person);
+  S("path", {d: "M820 800 C820 668 850 616 960 604 C1070 616 1100 668 1100 800 Z", fill: SH}, body);
+  S("path", {d: "M960 604 C1070 616 1100 668 1100 800 L1010 800 C1030 700 1010 640 960 604 Z", fill: SH2}, body);
+  S("path", {d: "M928 606 L960 652 L992 606 Z", fill: "#EEF0FA"}, body);
+  S("rect", {x: 938, y: 562, width: 44, height: 52, rx: 14, fill: C.skin2}, body);
+  const head = S("g", {id: "phead"}, person);
+  hairBack(head, 960, 506);
+  S("circle", {cx: 884, cy: 516, r: 15, fill: C.skin2}, head);
+  S("circle", {cx: 1036, cy: 516, r: 15, fill: C.skin2}, head);
+  S("ellipse", {cx: 960, cy: 506, rx: 78, ry: 88, fill: C.skin}, head);
+  hairFront(head, 960, 506);
+  S("circle", {cx: 926, cy: 548, r: 13, fill: "#E8907C", opacity: .45}, head);
+  S("circle", {cx: 994, cy: 548, r: 13, fill: "#E8907C", opacity: .45}, head);
+  glasses(head, 960, 506);
+  const eyes = S("g", {id: "peyes"}, head);
+  for (const x of [930, 990]) { S("ellipse", {cx: x, cy: 516, rx: 8.5, ry: 11, fill: "#1A1A24"}, eyes); S("circle", {cx: x + 3, cy: 512, r: 2.6, fill: "#FFFFFF"}, eyes); }
+  motion.set(eyes, {svgOrigin: "960 516"});
+  const brows = S("g", {id: "pbrows"}, head);
+  const bl = S("path", {d: "M914 492 Q930 484 946 490", stroke: C.hair, "stroke-width": 6, "stroke-linecap": "round", fill: "none"}, brows);
+  const br = S("path", {d: "M974 490 Q990 484 1006 492", stroke: C.hair, "stroke-width": 6, "stroke-linecap": "round", fill: "none"}, brows);
+  motion.set(bl, {svgOrigin: "930 490"}); motion.set(br, {svgOrigin: "990 490"});
+  S("path", {d: "M958 528 Q954 540 962 542", stroke: "#A2664B", "stroke-width": 4, "stroke-linecap": "round", fill: "none"}, head);
+  S("path", {id: "psmile", d: "M934 560 Q960 584 986 560", stroke: "#7A2E2E", "stroke-width": 5.5, "stroke-linecap": "round", fill: "none"}, head);
+  S("path", {id: "pworry", d: "M940 572 Q960 558 980 572", stroke: "#7A2E2E", "stroke-width": 5.5, "stroke-linecap": "round", fill: "none", opacity: 0}, head);
+  motion.set(head, {svgOrigin: "960 604"});   // the head pivots on the neck
+  // arms belong to the torso, so they rise and fall with each breath instead of floating free
+  S("path", {d: "M862 650 Q826 712 892 744", stroke: SH, "stroke-width": 50, "stroke-linecap": "round", fill: "none"}, body);
+  S("path", {d: "M1058 650 Q1094 712 1028 744", stroke: SH2, "stroke-width": 50, "stroke-linecap": "round", fill: "none"}, body);
+  // desk
+  const desk = S("g", {}, cam);
+  S("rect", {x: 500, y: 730, width: 920, height: 36, rx: 12, fill: "#2E3550"}, desk);
+  S("rect", {x: 540, y: 766, width: 840, height: 150, rx: 8, fill: "#262C45"}, desk);
+  S("rect", {x: 540, y: 766, width: 840, height: 12, fill: "#1D2238"}, desk);
+  const laptop = S("g", {}, cam);
+  S("rect", {x: 862, y: 612, width: 196, height: 120, rx: 12, fill: "#D6DAEA"}, laptop);
+  S("rect", {x: 842, y: 724, width: 236, height: 12, rx: 6, fill: "#BAC0D6"}, laptop);
+  S("circle", {cx: 960, cy: 672, r: 11, fill: "#AEB4CC"}, laptop);
+  // mug with steam
+  const mug = S("g", {}, cam);
+  S("rect", {x: 1196, y: 672, width: 52, height: 58, rx: 10, fill: C.warm}, mug);
+  S("path", {d: "M1248 686 C1272 686 1272 716 1248 716", stroke: C.warm, "stroke-width": 9, fill: "none"}, mug);
+  const steam = S("g", {id: "steam"}, mug);
+  for (const x of [1210, 1222, 1234]) S("path", {d: `M${x} 660 C${x - 8} 645 ${x + 8} 635 ${x} 620`, stroke: "#FFFFFF", "stroke-width": 4, "stroke-linecap": "round", fill: "none", opacity: .8}, steam);
+  // plant
+  const plant = S("g", {id: "plant"}, cam);
+  for (const [cx, cy, rx, ry, r, col] of [[640, 640, 16, 46, -24, "#1FA36F"], [668, 628, 16, 52, 6, "#2BBF83"], [694, 642, 16, 44, 30, "#1FA36F"], [654, 664, 14, 36, -48, "#2BBF83"], [684, 662, 14, 36, 50, "#2BBF83"]])
+    S("ellipse", {cx, cy, rx, ry, fill: col, transform: `rotate(${r} ${cx} ${cy + ry})`}, plant);
+  S("path", {d: "M630 690 L706 690 L696 732 L640 732 Z", fill: C.coral}, plant);
+  motion.set(plant, {svgOrigin: "668 730"});
+
+  // falling work items (scene 2), on top of desk area
+  const items = S("g", {id: "items"}, cam);
+  const spots = [];
+  for (let i = 0; i < 16; i++) spots.push([570 + (i % 2) * 60 + rnd() * 30, 726 - Math.floor(i / 2) * 15]);
+  for (let i = 0; i < 16; i++) spots.push([1280 + (i % 2) * 50 + rnd() * 30, 726 - Math.floor(i / 2) * 15]);
+  for (let i = 0; i < 12; i++) spots.push([120 + rnd() * 330, 1000 - Math.floor(i / 4) * 16 + rnd() * 6]);
+  for (let i = 0; i < 12; i++) spots.push([1500 + rnd() * 330, 1000 - Math.floor(i / 4) * 16 + rnd() * 6]);
+  window.__items = [];
+  spots.forEach(([x, y], i) => {
+    const d = pileItem(items, PILE.item, i);
+    motion.set(d, {x, y: -160 - rnd() * 300, rotation: (rnd() - .5) * 70, opacity: 1});
+    window.__items.push({el: d, x, y: y - 46, rot: (rnd() - .5) * 18});
+  });
+  // messages crossing
+  const env = S("g", {id: "msgs"}, cam);
+  window.__msgs = [];
+  for (let i = 0; i < 6; i++) {
+    const e = S("g", {}, env);
+    S("rect", {x: -48, y: -26, width: 96, height: 52, rx: 16, fill: "#FFFFFF", stroke: "#CDD3E4", "stroke-width": 2}, e);
+    S("circle", {cx: -26, cy: 0, r: 11, fill: [C.accent2, C.warm, C.alt][i % 3]}, e);
+    S("rect", {x: -8, y: -6, width: 40, height: 6, rx: 3, fill: "#D7DCEA"}, e); S("rect", {x: -8, y: 6, width: 28, height: 6, rx: 3, fill: "#D7DCEA"}, e);
+    motion.set(e, {x: 2050, y: 200 + i * 70, rotation: -8, opacity: 1});
+    window.__msgs.push(e);
+  }
+  // HUD: name tag and counter (not under the camera)
+  const hud = S("g", {id: "hud"}, g);
+  const tag = S("g", {id: "nametag"}, hud);
+  S("line", {x1: 1046, y1: 440, x2: 1136, y2: 386, stroke: "#FFFFFF", "stroke-width": 3}, tag);
+  const tagBg = S("rect", {x: 1130, y: 330, width: 300, height: 104, rx: 24, fill: "#FFFFFF", filter: "url(#soft)"}, tag);
+  S("circle", {cx: 1180, cy: 382, r: 22, fill: C.accent}, tag);
+  S("path", {d: "M1170 382 L1178 390 L1192 374", stroke: "#FFFFFF", "stroke-width": 4, fill: "none", "stroke-linecap": "round", "stroke-linejoin": "round"}, tag);
+  S("text", {x: 1218, y: 376, "font-family": FONT.disp, "font-weight": 700, "font-size": 34, fill: C.dark}, tag, UC.name || "Sam");
+  S("text", {x: 1218, y: 410, "font-family": FONT.body, "font-weight": 500, "font-size": 22, fill: "#5E6580"}, tag, UC.role || "");
+  tagBg.setAttribute("width", Math.max(300, 110 + Math.max(...[...tag.querySelectorAll("text")].map(t => t.getComputedTextLength()))));
+  motion.set(tag, {opacity: 0, scale: .6, svgOrigin: "1280 382"});
+  const ctr = S("g", {id: "counter"}, hud);
+  const ctrBg = S("rect", {x: 90, y: 80, width: 430, height: 96, rx: 22, fill: C.dark}, ctr);
+  const ctrLabel = S("text", {x: 122, y: 122, "font-family": FONT.body, "font-weight": 500, "font-size": 22, fill: C.muted}, ctr, PILE.label);
+  ctrBg.setAttribute("width", Math.max(430, ctrLabel.getComputedTextLength() + 64));
+  window.__ctrText = S("text", {x: 122, y: 160, "font-family": FONT.disp, "font-weight": 700, "font-size": 38, fill: "#FFFFFF"}, ctr, "0");
+  motion.set(ctr, {opacity: 0, y: -20});
+}
+
+function animOffice() {
+  const b1 = B.meet, b2 = B.pile;
+  const end = B.cost.start;
+  const oStart = ARCH === "B" ? B.pile.start - .45 : 0;
+  const tagIn = ARCH === "B" ? B.pile.start + .5 : b1.start + .35;
+  const tagOut = ARCH === "B" ? B.pile.start + 3.0 : ARCH === "C" ? B.before.start - .35 : b2.start - .1;
+  tl.fromTo("#office", {opacity: 0}, {opacity: 1, duration: .6, ease: "power2.out"}, oStart);
+  if (ARCH === "B") {   // pull back out of the laptop screen into the office
+    tl.fromTo("#cam", {scale: 4.2, svgOrigin: "960 672"}, {scale: 1, duration: 1.4, ease: "power3.inOut"}, oStart);
+  } else {
+    tl.fromTo("#cam", {scale: 1.06, svgOrigin: "960 600"}, {scale: 1, duration: 2.2, ease: "power3.out"}, 0);
+    tl.fromTo("#person", {y: 40, opacity: 0}, {y: 0, opacity: 1, duration: .8, ease: "back.out(1.6)"}, .15);
+  }
+  // idle: breathing, blinks, steam, clouds, plant sway (finite loops)
+  const idleLen = end - 0.1 - oStart;
+  // breathing: the torso scales from the seat; the head rides exactly as far as the neck moves ((800-604) x 1.2%)
+  tl.to("#pbody", {scaleY: 1.012, svgOrigin: "960 800", duration: 1.6, ease: "sine.inOut", yoyo: true, repeat: Math.floor(idleLen / 1.6)}, oStart);
+  tl.to("#phead", {y: -2.35, duration: 1.6, ease: "sine.inOut", yoyo: true, repeat: Math.floor(idleLen / 1.6)}, oStart);
+  for (const t of [1.4, 3.9, 6.8, 9.6]) tl.to("#peyes", {scaleY: .1, duration: .07, yoyo: true, repeat: 1, ease: "power1.in"}, t);
+  tl.to("#steam", {y: -10, opacity: .2, duration: 1.4, ease: "sine.inOut", yoyo: true, repeat: Math.floor(idleLen / 1.4)}, 0);
+  tl.to("#clouds", {x: 60, duration: idleLen, ease: "none"}, 0);
+  tl.to("#plant", {rotation: 2, duration: 1.8, ease: "sine.inOut", yoyo: true, repeat: Math.floor(idleLen / 1.8)}, 0);
+  tl.to("#nametag", {opacity: 1, scale: 1, duration: .55, ease: "back.out(2)"}, tagIn); cue(tagIn, "pop");
+  tl.to("#phead", {rotation: -3, duration: .55, ease: "sine.inOut", yoyo: true, repeat: 1}, tagIn - .15);
+  tl.to("#nametag", {opacity: 0, y: -16, duration: .35}, tagOut);
+  if (ARCH === "C") { tl.to("#office", {opacity: 0, duration: .35}, B.before.start - .35); return; }
+
+  // scene 2: the pile-up
+  const s = b2.start;
+  tl.to("#counter", {opacity: 1, y: 0, duration: .45, ease: "back.out(2)"}, s + .1); cue(s + .1, "pop");
+  const ctr = {v: 0};
+  tl.to(ctr, {v: PILE.count, duration: b2.dur - .4, ease: "power2.in", onUpdate() { window.__ctrText.textContent = Math.round(ctr.v).toLocaleString("en-US"); }}, s + .3);
+  window.__items.forEach((d, i) => {
+    const t = s + .25 + i * (b2.dur * .62 / window.__items.length);
+    tl.to(d.el, {y: d.y, rotation: d.rot, duration: .55, ease: "bounce.out"}, t);
+    if (i % 7 === 0) cue(t + .3, "tick");
+  });
+  document.querySelectorAll(".tower").forEach((t, i) => tl.to(t, {scaleY: 1, duration: b2.dur * .55, ease: "power2.out"}, s + .6 + i * .25));
+  window.__msgs.forEach((e, i) => { tl.to(e, {x: -150, y: `+=${60 + i * 8}`, rotation: 10, duration: 1.5, ease: "power1.inOut"}, s + .8 + i * .45); if (i % 2 === 0) cue(s + .9 + i * .45, "swish"); });
+  tl.to("#psmile", {opacity: 0, duration: .2}, s + 1.4);
+  tl.to("#pworry", {opacity: 1, duration: .2}, s + 1.4);
+  tl.to(document.querySelector("#pbrows path:first-child"), {rotation: 14, duration: .3}, s + 1.4);
+  tl.to(document.querySelector("#pbrows path:last-child"), {rotation: -14, duration: .3}, s + 1.4);
+  tl.to("#phead", {rotation: 3, duration: .45, ease: "sine.inOut", yoyo: true, repeat: 3}, s + 1.8);
+  tl.to("#person", {rotation: 1.2, svgOrigin: "960 800", duration: .8, ease: "sine.inOut"}, s + 1.3);   // a weary lean
+  tl.to("#cam", {scale: 1.08, svgOrigin: "960 560", duration: b2.dur, ease: "sine.inOut"}, s + (ARCH === "B" ? 1.0 : 0));
+  tl.to("#counter", {opacity: 0, duration: .3}, end - .45);
+
+  // transition: thought bubbles grow into the whiteboard
+  const fx = $("fx");
+  const tb = S("g", {id: "thought"}, fx);
+  const dots = [[1062, 400, 14], [1112, 340, 22], [1190, 270, 34]].map(([cx, cy, r]) => S("circle", {cx, cy, r, fill: "#FFFFFF"}, tb));
+  const big = S("circle", {id: "bigthought", cx: 1300, cy: 200, r: 60, fill: "#FBFBF8"}, tb);
+  motion.set(dots, {scale: 0, transformOrigin: "center"}); motion.set(big, {scale: 0, svgOrigin: "1300 200"});
+  const tt = end - .75;
+  dots.forEach((d, i) => tl.to(d, {scale: 1, duration: .22, ease: "back.out(3)"}, tt + i * .1));
+  tl.to(big, {scale: 1, duration: .25, ease: "back.out(2)"}, tt + .3); cue(tt + .3, "whoosh");
+  tl.to(big, {attr: {r: 2400}, duration: .55, ease: "power3.in"}, tt + .5);
+  tl.set("#office", {opacity: 0}, end + .1);
+  tl.set("#board", {opacity: 1}, end + .05);
+  tl.to(tb, {opacity: 0, duration: .25}, end + .1);
+}
+
+/* ================= SCENE 3-4: WHITEBOARD ================= */
+let rc, pen;
+function buildBoard() {
+  const g = $("board");
+  motion.set(g, {opacity: 0});
+  S("rect", {x: 0, y: 0, width: 1920, height: 1080, fill: "#FBFBF8"}, g);
+  S("rect", {x: 0, y: 0, width: 1920, height: 1080, fill: "url(#grid)"}, g);
+  rc = rough.svg($("root"));
+  pen = S("g", {id: "pen", opacity: 0}, $("fx"));
+  const p = S("g", {transform: "rotate(35)"}, pen);
+  S("path", {d: "M0 0 L-10 -26 L10 -26 Z", fill: C.ink}, p);
+  S("rect", {x: -14, y: -150, width: 28, height: 126, rx: 8, fill: C.accent}, p);
+  S("rect", {x: -14, y: -60, width: 28, height: 10, fill: C.ink, opacity: .6}, p);
+  S("rect", {x: -16, y: -168, width: 32, height: 26, rx: 8, fill: C.ink}, p);
+}
+function sketch(parent, node) { parent.appendChild(node); const ps = [...node.querySelectorAll("path")]; ps.forEach(p => { p.setAttribute("fill", "none"); const L = p.getTotalLength(); p.style.strokeDasharray = L; p.style.strokeDashoffset = L; p.__L = L; }); return ps; }
+function draw(paths, start, dur) {
+  const total = paths.reduce((a, p) => a + p.__L, 0) || 1; let t = start;
+  for (const p of paths) {
+    const d = dur * p.__L / total, o = {k: 0};
+    tl.to(o, {k: 1, duration: d, ease: "none", onUpdate() {
+      p.style.strokeDashoffset = p.__L * (1 - o.k);
+      const pt = p.getPointAtLength(p.__L * o.k), m = p.getScreenCTM();
+      const sp = new DOMPoint(pt.x, pt.y).matrixTransform(m);
+      pen.setAttribute("transform", `translate(${sp.x},${sp.y})`);
+    }}, t);
+    t += d;
+  }
+  return t;
+}
+function hand(parent, x, y, txt, size, col, start, dur, anchor = "start") {
+  const id = "clip" + Math.round(rnd() * 1e9);
+  const t = S("text", {x, y, "font-family": FONT.hand, "font-weight": 700, "font-size": size, fill: col, "text-anchor": anchor}, parent, txt);
+  const bb = t.getBBox();
+  const cp = S("clipPath", {id}, document.querySelector("defs"));
+  const r = S("rect", {x: bb.x - 6, y: bb.y - 10, width: 0, height: bb.height + 20}, cp);
+  t.setAttribute("clip-path", `url(#${id})`);
+  const o = {w: 0};
+  tl.to(o, {w: bb.width + 12, duration: dur, ease: "none", onUpdate() {
+    r.setAttribute("width", o.w);
+    const sp = new DOMPoint(bb.x + o.w, bb.y + bb.height * .7).matrixTransform(t.getScreenCTM());
+    pen.setAttribute("transform", `translate(${sp.x},${sp.y})`);
+  }}, start);
+  return t;
+}
+/* hand-drawn icons for the whiteboard: doc, folder, mail, sheet, db, chart, book, calendar, chat, phone, clock, people */
+function sketchIcon(R, type, cx, cy, sd, ink) {
+  const o = {...ink, seed: sd}, y0 = cy - 58;
+  if (type === "book") return [...sketch(R, rc.rectangle(cx - 60, y0, 120, 120, o)), ...sketch(R, rc.line(cx, y0, cx, y0 + 120, {...o, seed: sd + 1}))];
+  if (type === "mail") return [...sketch(R, rc.rectangle(cx - 70, y0 + 16, 140, 96, o)), ...sketch(R, rc.linearPath([[cx - 70, y0 + 18], [cx, y0 + 74], [cx + 70, y0 + 18]], {...o, seed: sd + 1}))];
+  if (type === "folder") return sketch(R, rc.path(`M${cx - 70} ${y0 + 28} L${cx - 70} ${y0 + 118} L${cx + 70} ${y0 + 118} L${cx + 70} ${y0 + 38} L${cx - 5} ${y0 + 38} L${cx - 20} ${y0 + 18} L${cx - 70} ${y0 + 18} Z`, o));
+  if (type === "sheet") return [...sketch(R, rc.rectangle(cx - 65, y0 + 4, 130, 112, o)), ...[0, 1, 2].flatMap(k => sketch(R, rc.line(cx - 65, y0 + 32 + k * 28, cx + 65, y0 + 32 + k * 28, {...o, strokeWidth: 3, seed: sd + 2 + k}))), ...sketch(R, rc.line(cx - 20, y0 + 4, cx - 20, y0 + 116, {...o, strokeWidth: 3, seed: sd + 6}))];
+  if (type === "db") return [...sketch(R, rc.ellipse(cx, y0 + 18, 130, 40, o)), ...sketch(R, rc.line(cx - 65, y0 + 18, cx - 65, y0 + 104, {...o, seed: sd + 1})), ...sketch(R, rc.line(cx + 65, y0 + 18, cx + 65, y0 + 104, {...o, seed: sd + 2})), ...sketch(R, rc.arc(cx, y0 + 104, 130, 40, 0, Math.PI, false, {...o, seed: sd + 3}))];
+  if (type === "chart") return [...sketch(R, rc.linearPath([[cx - 70, y0], [cx - 70, y0 + 118], [cx + 70, y0 + 118]], o)), ...[0, 1, 2].flatMap(k => sketch(R, rc.rectangle(cx - 52 + k * 42, y0 + 118 - (40 + k * 30), 28, 40 + k * 30, {...o, strokeWidth: 3.5, seed: sd + 2 + k})))];
+  if (type === "calendar") return [...sketch(R, rc.rectangle(cx - 65, y0 + 8, 130, 110, o)), ...sketch(R, rc.line(cx - 65, y0 + 38, cx + 65, y0 + 38, {...o, seed: sd + 1})), ...[0, 1].flatMap(k => sketch(R, rc.line(cx - 30 + k * 60, y0 - 4, cx - 30 + k * 60, y0 + 20, {...o, seed: sd + 2 + k}))), ...[0, 1, 2].flatMap(k => sketch(R, rc.rectangle(cx - 48 + k * 36, y0 + 58, 22, 20, {...o, strokeWidth: 3, seed: sd + 5 + k})))];
+  if (type === "chat") return [...sketch(R, rc.path(`M${cx - 70} ${y0 + 10} L${cx + 70} ${y0 + 10} L${cx + 70} ${y0 + 86} L${cx - 20} ${y0 + 86} L${cx - 46} ${y0 + 116} L${cx - 42} ${y0 + 86} L${cx - 70} ${y0 + 86} Z`, o)), ...[0, 1].flatMap(k => sketch(R, rc.line(cx - 46, y0 + 36 + k * 24, cx + 46 - k * 30, y0 + 36 + k * 24, {...o, strokeWidth: 3, seed: sd + 2 + k})))];
+  if (type === "phone") return [...sketch(R, rc.rectangle(cx - 38, y0, 76, 124, o)), ...sketch(R, rc.line(cx - 12, y0 + 110, cx + 12, y0 + 110, {...o, seed: sd + 1}))];
+  if (type === "clock") return [...sketch(R, rc.circle(cx, y0 + 60, 120, o)), ...sketch(R, rc.linearPath([[cx, y0 + 22], [cx, y0 + 60], [cx + 30, y0 + 76]], {...o, seed: sd + 1}))];
+  if (type === "people") return [...sketch(R, rc.circle(cx - 30, y0 + 30, 44, o)), ...sketch(R, rc.circle(cx + 32, y0 + 36, 40, {...o, seed: sd + 1})), ...sketch(R, rc.arc(cx - 30, y0 + 120, 90, 90, Math.PI, Math.PI * 2, false, {...o, seed: sd + 2})), ...sketch(R, rc.arc(cx + 32, y0 + 120, 80, 80, Math.PI, Math.PI * 2, false, {...o, seed: sd + 3}))];
+  return [...sketch(R, rc.rectangle(cx - 50, y0, 100, 120, o)), ...[0, 1, 2].flatMap(k => sketch(R, rc.line(cx - 32, y0 + 34 + k * 26, cx + 32 - (k % 2) * 16, y0 + 34 + k * 26, {...o, strokeWidth: 3, seed: sd + 2 + k})))];
+}
+function animBoard() {
+  const g = $("board"), b3 = B.cost, b4 = B.workaround;
+  tl.fromTo(g, {scale: 1}, {scale: 1.035, svgOrigin: "960 540", duration: b3.dur + b4.dur + .6, ease: "sine.inOut"}, b3.start - .1);
+  const ink = {stroke: C.ink, strokeWidth: 4.5, roughness: 1.3, bowing: 1.2};
+  const L = S("g", {id: "boardLeft"}, g);
+  let t = b3.start + .1;
+  tl.set(pen, {opacity: 1}, t);
+  // clock
+  const clock = sketch(L, rc.circle(470, 470, 330, {...ink, seed: 3, strokeWidth: 5}));
+  const ticks = [];
+  for (let k = 0; k < 12; k++) { const a = k * Math.PI / 6, r1 = 140, r2 = k % 3 ? 128 : 116; ticks.push(...sketch(L, rc.line(470 + Math.cos(a) * r2, 470 + Math.sin(a) * r2, 470 + Math.cos(a) * r1, 470 + Math.sin(a) * r1, {...ink, seed: 10 + k, strokeWidth: 4}))); }
+  t = draw(clock, t, .6); t = draw(ticks, t, .35);
+  const hands = S("g", {}, L);
+  const mh = S("line", {x1: 470, y1: 470, x2: 470, y2: 360, stroke: C.accent, "stroke-width": 9, "stroke-linecap": "round"}, hands);
+  const hh = S("line", {x1: 470, y1: 470, x2: 540, y2: 470, stroke: C.ink, "stroke-width": 11, "stroke-linecap": "round"}, hands);
+  S("circle", {cx: 470, cy: 470, r: 11, fill: C.ink}, hands);
+  motion.set(hands, {opacity: 0});
+  tl.to(hands, {opacity: 1, duration: .15}, t);
+  tl.to(mh, {rotation: 1080, svgOrigin: "470 470", duration: b3.dur + .4, ease: "power1.in"}, t);
+  tl.to(hh, {rotation: 90, svgOrigin: "470 470", duration: b3.dur + .4, ease: "power1.in"}, t);
+  cue(t, "tick"); cue(t + .5, "tick"); cue(t + 1, "tick");
+  // the three places the work is scattered
+  const R = S("g", {id: "boardRight"}, g);
+  const SX = [1070, 1320, 1590];
+  const src = (UC.sources || [["calendar", "Calendars"], ["chat", "Chats"], ["sheet", "Spreadsheets"]]).slice(0, 3);
+  const icons = src.map(([type], k) => sketchIcon(R, type, SX[k], 320, 21 + k * 10, ink));
+  let t2 = b3.start + 1.0;
+  t2 = draw(icons[0], t2, .35); t2 = draw(icons[1], t2, .4); t2 = draw(icons[2], t2, .4);
+  src.forEach(([, label], k) => hand(R, SX[k], 450, label, fitHand(label, 54, 240), C.ink, b3.start + 1.25 + k * .4, .25, "middle"));
+  const loop = sketch(R, rc.path("M1060 500 C1180 600 1460 600 1580 500 M1580 500 L1560 470 M1580 500 L1546 506", {stroke: C.accent, strokeWidth: 5, roughness: 1.1, seed: 31}));
+  draw(loop, b3.start + 2.3, .45);
+  hand(R, 1320, 650, "?", 96, C.accent, b3.start + 2.6, .12, "middle");
+  const eq = UC.equation || "1 task = 1 lost morning";
+  hand(g, 960, 860, eq, fitHand(eq, 92, 1500), C.ink, b3.start + 2.4, 1.0, "middle");
+  const ul = sketch(g, rc.line(640, 890, 1280, 892, {stroke: C.accent, strokeWidth: 6, roughness: 1.4, seed: 41}));
+  draw(ul, b3.start + 3.45, .3);
+
+  // ---- beat 4: the usual workaround, crossed out ----
+  const s = b4.start;
+  tl.to([L, R], {scale: .5, x: (i) => i === 0 ? -150 : -560, y: -140, transformOrigin: "0% 0%", duration: .6, ease: "power3.inOut"}, s - .15);
+  tl.to(g.querySelectorAll(":scope > text, :scope > g:not(#boardLeft):not(#boardRight)"), {opacity: 0, duration: .3}, s - .15);
+  const Bt = S("g", {id: "boardBot"}, g);
+  const wk = Object.assign({icon: "sheet", text: "Maybe Tuesday?", verdict: "Not good enough"}, UC.workaround || {});
+  let t3 = draw(sketchIcon(Bt, wk.icon, 765, 580, 51, ink), s + .35, .55);
+  const bub = sketch(Bt, rc.path("M900 420 L1520 420 Q1560 420 1560 460 L1560 600 Q1560 640 1520 640 L960 640 L900 690 L920 640 Q880 640 880 600 L880 460 Q880 420 920 420 Z", {...ink, seed: 57}));
+  t3 = draw(bub, t3, .55);
+  hand(Bt, 1220, 556, wk.text, fitHand(wk.text, 72, 600), C.ink, t3, .6, "middle");
+  cue(t3, "tick");
+  const tx = s + 2.25;
+  const X = [...sketch(Bt, rc.line(930, 450, 1510, 615, {stroke: C.red, strokeWidth: 12, roughness: 1.6, seed: 61})), ...sketch(Bt, rc.line(1510, 450, 930, 615, {stroke: C.red, strokeWidth: 12, roughness: 1.6, seed: 62}))];
+  draw(X, tx, .35); cue(tx, "swish");
+  hand(Bt, 1220, 760, wk.verdict, fitHand(wk.verdict, 78, 640), C.red, tx + .4, .55, "middle");
+  // the decision still has their name on it
+  const doc = [...sketch(Bt, rc.rectangle(1640, 600, 200, 260, {...ink, seed: 71})), ...sketch(Bt, rc.line(1670, 650, 1810, 650, {...ink, seed: 72, strokeWidth: 3})),
+    ...sketch(Bt, rc.line(1670, 690, 1790, 690, {...ink, seed: 73, strokeWidth: 3})), ...sketch(Bt, rc.line(1670, 730, 1810, 730, {...ink, seed: 74, strokeWidth: 3})), ...sketch(Bt, rc.line(1670, 820, 1810, 820, {...ink, seed: 75, strokeWidth: 3}))];
+  draw(doc, s + 3.05, .55);
+  hand(Bt, 1740, 812, UC.name || "Sam", fitHand(UC.name || "Sam", 56, 170), C.accent, s + 3.65, .45, "middle");
+  tl.set(pen, {opacity: 0}, s + 4.25);
+  if (ARCH === "C") return;
+  // eraser wipe into the product scene
+  const wipe = S("rect", {id: "wipe", x: 0, y: -200, width: 2600, height: 1480, fill: C.bg}, $("fx"));
+  motion.set(wipe, {x: 2600, skewX: -12});
+  const we = B.setup.start;
+  tl.to(wipe, {x: -300, duration: .55, ease: "power3.inOut"}, we - .55); cue(we - .55, "whoosh");
+  tl.set("#board", {opacity: 0}, we - .02);
+  tl.set("#product", {opacity: 1}, we - .02);
+  tl.to(wipe, {x: -2900, duration: .5, ease: "power2.in"}, we);
+}
+
+/* ================= B: THE 3 O'CLOCK REQUEST (opens on the laptop screen) ================= */
+function wrapLines(txt, size, maxw, weight = 500) {
+  const probe = S("text", {"font-family": FONT.body, "font-weight": weight, "font-size": size}, $("root")), out = []; let cur = "";
+  for (const w of txt.split(" ")) { probe.textContent = (cur + " " + w).trim(); if (probe.getComputedTextLength() > maxw && cur) { out.push(cur); cur = w; } else cur = (cur + " " + w).trim(); }
+  out.push(cur); probe.remove(); return out;
+}
+function animPing() {
+  const b = B.ping, s = b.start, g = S("g", {id: "ping"}); $("root").insertBefore(g, $("fx"));
+  S("rect", {x: 0, y: 0, width: 1920, height: 1080, fill: "#1E2338"}, g);
+  S("rect", {x: 300, y: 110, width: 1320, height: 830, rx: 36, fill: "#121628"}, g);
+  const scr = S("g", {}, g);
+  S("rect", {x: 330, y: 140, width: 1260, height: 770, rx: 18, fill: "#F5F6FC"}, scr);
+  S("rect", {x: 330, y: 140, width: 230, height: 770, rx: 18, fill: "#E5E8F5"}, scr);
+  for (let k = 0; k < 6; k++) S("rect", {x: 362, y: 200 + k * 58, width: 150 - (k % 3) * 30, height: 16, rx: 8, fill: k === 1 ? SH : "#CDD3E4"}, scr);
+  S("text", {x: 600, y: 222, "font-family": FONT.disp, "font-weight": 700, "font-size": 34, fill: C.dark}, scr, "Today");
+  for (let k = 0; k < 6; k++) { const x = 600 + (k % 3) * 200, y = 270 + Math.floor(k / 3) * 190; S("rect", {x, y, width: 170, height: 160, rx: 14, fill: "#FFFFFF", stroke: "#DDE1EE", "stroke-width": 2}, scr); for (let j = 0; j < 4; j++) S("rect", {x: x + 18, y: y + 26 + j * 26, width: j ? 120 - (j % 2) * 30 : 80, height: 9, rx: 4.5, fill: j ? "#DDE1EE" : C.accent2}, scr); }
+  const clk = S("g", {}, scr);
+  S("rect", {x: 1300, y: 170, width: 260, height: 110, rx: 22, fill: "#FFFFFF", stroke: "#DDE1EE", "stroke-width": 2}, clk);
+  const ct = S("text", {x: 1430, y: 247, "text-anchor": "middle", "font-family": FONT.disp, "font-weight": 700, "font-size": 56, fill: C.dark}, clk, "3:00 PM");
+  const cal = S("g", {}, scr);
+  const calR = S("rect", {x: 1300, y: 300, width: 260, height: 96, rx: 18, fill: "#FFFFFF", stroke: "#DDE1EE", "stroke-width": 2}, cal);
+  S("circle", {cx: 1330, cy: 348, r: 9, fill: C.red}, cal);
+  S("text", {x: 1350, y: 340, "font-family": FONT.body, "font-weight": 700, "font-size": 22, fill: C.dark}, cal, PING.meeting);
+  S("text", {x: 1350, y: 372, "font-family": FONT.body, "font-weight": 600, "font-size": 21, fill: C.red}, cal, PING.meetingTime);
+  const msg = S("g", {}, scr);
+  const ql = wrapLines(UC.request || APP.request, 26, 520, 500), mh = 150 + ql.length * 36;
+  S("rect", {x: 980, y: 880 - mh, width: 580, height: mh, rx: 22, fill: "#FFFFFF", filter: "url(#softdark)"}, msg);
+  S("circle", {cx: 1030, cy: 930 - mh, r: 26, fill: SH}, msg);
+  S("text", {x: 1030, y: 939 - mh, "text-anchor": "middle", "font-family": FONT.disp, "font-weight": 700, "font-size": 22, fill: "#FFFFFF"}, msg, PING.initials);
+  S("text", {x: 1072, y: 924 - mh, "font-family": FONT.body, "font-weight": 700, "font-size": 23, fill: C.dark}, msg, PING.from);
+  S("text", {x: 1072, y: 952 - mh, "font-family": FONT.body, "font-weight": 500, "font-size": 19, fill: "#818AA3"}, msg, "now");
+  S("text", {x: 1010, y: 1000 - mh, "font-family": FONT.body, "font-weight": 700, "font-size": 26, fill: C.red}, msg, PING.label);
+  ql.forEach((l, i) => S("text", {x: 1010, y: 1040 - mh + i * 36, "font-family": FONT.body, "font-weight": 500, "font-size": 26, fill: "#1B2034"}, msg, l));
+  const typing = S("g", {}, scr); S("rect", {x: 1440, y: 800, width: 120, height: 60, rx: 30, fill: "#FFFFFF", filter: "url(#softdark)"}, typing);
+  const tdots = [0, 1, 2].map(k => S("circle", {cx: 1475 + k * 25, cy: 830, r: 7, fill: "#A6ADC6"}, typing));
+  tl.fromTo(g, {opacity: 0}, {opacity: 1, duration: .5}, 0);
+  tl.fromTo(scr, {scale: 1.04}, {scale: 1, svgOrigin: "960 525", duration: 2.5, ease: "power2.out"}, 0);
+  motion.set(typing, {opacity: 0}); motion.set(msg, {opacity: 0, y: 60, scale: .9, svgOrigin: "1270 760"});
+  tl.to(typing, {opacity: 1, duration: .2}, s + .4);
+  tdots.forEach((d, k) => tl.to(d, {y: -8, duration: .18, yoyo: true, repeat: 3, ease: "sine.inOut"}, s + .45 + k * .09));
+  tl.to(typing, {opacity: 0, duration: .15}, s + 1.25);
+  tl.to(msg, {opacity: 1, y: 0, scale: 1, duration: .5, ease: "back.out(1.8)"}, s + 1.3); cue(s + 1.3, "pop");
+  tl.to(ct, {fill: C.red, duration: .25, yoyo: true, repeat: 3}, s + b.dur * .45); cue(s + b.dur * .45, "tick");
+  tl.to(calR, {attr: {stroke: C.red, "stroke-width": 5}, duration: .3}, s + b.dur * .8); cue(s + b.dur * .8, "tick");
+  const e = B.pile.start - .45;
+  tl.to(g, {scale: .2, svgOrigin: "960 672", opacity: 0, duration: 1.0, ease: "power3.in"}, e); cue(e, "whoosh");
+}
+
+/* ================= C: BEFORE / AFTER, side by side ================= */
+function animSplit() {
+  const bf = B.before, af = B.after, res = B.result, root = $("root");
+  const wrap = (id) => { const el = $(id), w = S("g", {id: id + "Wrap"}); el.parentNode.insertBefore(w, el); w.appendChild(el); return w; };
+  const wn = wrap("product"), wb = wrap("board");
+  const cp = S("clipPath", {id: "halfclip"}, document.querySelector("defs")); S("rect", {x: 0, y: 0, width: 1920, height: 1080, rx: 60}, cp);
+  wn.setAttribute("clip-path", "url(#halfclip)"); wb.setAttribute("clip-path", "url(#halfclip)");
+  const bg = S("g", {id: "splitbg"}); root.insertBefore(bg, wn);
+  S("rect", {x: 0, y: 0, width: 1920, height: 1080, fill: "url(#darkglow)"}, bg);
+  S("rect", {x: 0, y: 0, width: 1920, height: 1080, fill: "url(#dots)", opacity: .6}, bg);
+  const lab = (x, txt, col) => { const l = S("g", {}, bg); S("text", {x, y: 236, "text-anchor": "middle", "font-family": FONT.disp, "font-weight": 700, "font-size": 30, "letter-spacing": 5, fill: col}, l, txt); return l; };
+  const L1 = lab(480, (UC.beforeLabel || "THE OLD WAY").toUpperCase(), "#FF8A8D");
+  const L2 = lab(1440, (UC.afterLabel || `THE ${(UC.product || BR.wordmark)} WAY`).toUpperCase(), mix(C.alt, "#ffffff", .35));
+  const div = S("line", {x1: 960, y1: 200, x2: 960, y2: 880, stroke: C.line, "stroke-width": 3}, bg);
+  const half = (x) => ({svgOrigin: "0 0", scale: .47, x, y: 290});
+  motion.set(bg, {opacity: 0}); motion.set([L1, L2], {opacity: 0, y: 14});
+  motion.set(wb, half(24)); motion.set(wn, half(994));
+  motion.set(div, {attr: {y2: 200}});
+  const t0 = bf.start - .35;
+  tl.to(bg, {opacity: 1, duration: .35}, t0); cue(t0, "whoosh");
+  tl.to(div, {attr: {y2: 880}, duration: .5, ease: "power2.out"}, t0 + .1);
+  tl.set("#board", {opacity: 1}, t0 + .15); tl.set("#product", {opacity: 1}, t0 + .15);
+  tl.fromTo(wb, {opacity: 0, y: 330}, {opacity: 1, y: 290, duration: .45, ease: "power3.out"}, t0 + .15);
+  tl.fromTo(wn, {opacity: 0, y: 330}, {opacity: .55, y: 290, duration: .45, ease: "power3.out"}, t0 + .25);
+  tl.to(L1, {opacity: 1, y: 0, duration: .35, ease: "back.out(2)"}, t0 + .3);
+  tl.to(L2, {opacity: .4, y: 0, duration: .35}, t0 + .4);
+  tl.to(wb, {opacity: .45, duration: .4}, af.start - .3); tl.to(L1, {opacity: .4, duration: .3}, af.start - .3);
+  tl.to(wn, {opacity: 1, duration: .4}, af.start - .3); tl.to(L2, {opacity: 1, scale: 1.08, svgOrigin: "1440 226", duration: .35, ease: "back.out(2)"}, af.start - .3); cue(af.start - .3, "pop");
+  const t2 = res.start - .8;
+  tl.to([wb, L1, L2, div], {opacity: 0, duration: .35}, t2);
+  tl.to(wn, {scale: 1, x: 0, y: 0, duration: .65, ease: "power3.inOut"}, t2); cue(t2, "swish");
+  tl.set(wn, {attr: {"clip-path": ""}}, t2 + .66);
+  tl.to(bg, {opacity: 0, duration: .3}, res.start);
+}
+
+/* ================= SCENE 5: SETUP (flat 2D + motion graphics) ================= */
+/* The brand mark: the logo image from the brand kit, or a drawn monogram tile. */
+function logoMark(parent, cx, cy, s, glow = true) {
+  const g = S("g", {transform: `translate(${cx},${cy}) scale(${s})`}, parent);
+  const tile = S("path", {d: "M-70 -110 H70 Q110 -110 110 -70 V70 Q110 110 70 110 H-70 Q-110 110 -110 70 V-70 Q-110 -110 -70 -110 Z", stroke: C.accent2, "stroke-width": 16, fill: "none", "stroke-linejoin": "round"}, g);
+  const parts = [tile], nodes = [];
+  if (BR.logo) {
+    const im = S("image", {href: BR.logo, x: -86, y: -86, width: 172, height: 172, preserveAspectRatio: "xMidYMid meet"}, g);
+    nodes.push(im);
+  } else {
+    const letter = S("text", {x: 0, y: 46, "text-anchor": "middle", "font-family": FONT.disp, "font-weight": 700, "font-size": 140, fill: "#FFFFFF"}, g, (BR.monogram || BR.wordmark || "A").trim()[0]);
+    nodes.push(letter);
+  }
+  const pin = S("circle", {cx: 104, cy: -104, r: 24, fill: C.alt, stroke: C.bg, "stroke-width": 8}, g);
+  if (glow) g.setAttribute("filter", "url(#neon)");
+  return {g, parts, nodes, pin};
+}
+function drawLogo(m, t, dur = .45) {
+  m.parts.forEach((p, i) => { const L = p.getTotalLength(); motion.set(p, {strokeDasharray: L, strokeDashoffset: L}); tl.to(p, {strokeDashoffset: 0, duration: dur * 1.4, ease: "power2.out"}, t + i * .08); });
+  motion.set([...m.nodes, m.pin], {scale: 0, transformOrigin: "center"});
+  tl.to([...m.nodes, m.pin], {scale: 1, duration: .4, ease: "back.out(3)", stagger: .08}, t + .35);
+}
+function card(parent, w, h) {
+  const g = S("g", {}, parent);
+  S("rect", {x: -w / 2, y: -h / 2, width: w, height: h, rx: 8, fill: "#FFFFFF"}, g);
+  for (let k = 0; k < 4; k++) S("rect", {x: -w / 2 + 10, y: -h / 2 + 14 + k * 14, width: k ? w - 24 - (k % 2) * 12 : w * .5, height: 5, rx: 2.5, fill: k ? "#D7DCEA" : C.accent2}, g);
+  return g;
+}
+function chip(parent, x, y, txt, col) {
+  const g = S("g", {transform: `translate(${x},${y})`}, parent);
+  const r = S("rect", {x: 0, y: -22, width: 10, height: 44, rx: 22, fill: col, opacity: .16}, g);
+  const t = S("text", {x: 18, y: 8, "font-family": FONT.body, "font-weight": 600, "font-size": 22, fill: col}, g, txt);
+  r.setAttribute("width", t.getComputedTextLength() + 36);
+  return {g, w: t.getComputedTextLength() + 36};
+}
+/* generic flat glyphs for input tiles: calendar, chat, mail, sheet, upload, people, doc, bell */
+function glyph(t, kind, cx, cy, col) {
+  const W = "#FFFFFF";
+  if (kind === "calendar") { S("rect", {x: cx - 26, y: cy - 22, width: 52, height: 46, rx: 8, fill: col}, t); S("rect", {x: cx - 26, y: cy - 22, width: 52, height: 14, rx: 6, fill: mix(col, "#000000", .25)}, t); for (let k = 0; k < 3; k++) S("rect", {x: cx - 18 + k * 13, y: cy - 2, width: 9, height: 8, rx: 2, fill: W}, t); }
+  else if (kind === "chat") { S("path", {d: `M${cx - 26} ${cy - 20} H${cx + 26} V${cy + 12} H${cx - 6} L${cx - 18} ${cy + 24} V${cy + 12} H${cx - 26} Z`, fill: col}, t); for (let k = 0; k < 2; k++) S("rect", {x: cx - 16, y: cy - 10 + k * 10, width: 32 - k * 12, height: 5, rx: 2.5, fill: W}, t); }
+  else if (kind === "mail") { S("rect", {x: cx - 28, y: cy - 19, width: 56, height: 38, rx: 7, fill: col}, t); S("path", {d: `M${cx - 26} ${cy - 16} L${cx} ${cy + 4} L${cx + 26} ${cy - 16}`, stroke: W, "stroke-width": 4, fill: "none", "stroke-linejoin": "round"}, t); }
+  else if (kind === "sheet") { S("rect", {x: cx - 24, y: cy - 26, width: 48, height: 52, rx: 6, fill: col}, t); for (let k = 0; k < 3; k++) S("rect", {x: cx - 16, y: cy - 14 + k * 12, width: 32, height: 4, fill: W}, t); S("rect", {x: cx - 4, y: cy - 18, width: 4, height: 38, fill: W}, t); }
+  else if (kind === "people") { S("circle", {cx: cx - 10, cy: cy - 10, r: 10, fill: col}, t); S("circle", {cx: cx + 14, cy: cy - 6, r: 8, fill: mix(col, "#ffffff", .3)}, t); S("path", {d: `M${cx - 28} ${cy + 22} Q${cx - 10} ${cy - 4} ${cx + 8} ${cy + 22} Z`, fill: col}, t); S("path", {d: `M${cx} ${cy + 22} Q${cx + 14} ${cy + 2} ${cx + 30} ${cy + 22} Z`, fill: mix(col, "#ffffff", .3)}, t); }
+  else if (kind === "doc") { S("rect", {x: cx - 22, y: cy - 26, width: 44, height: 52, rx: 6, fill: col}, t); for (let k = 0; k < 3; k++) S("rect", {x: cx - 14, y: cy - 14 + k * 11, width: 28 - (k % 2) * 8, height: 4, rx: 2, fill: W}, t); }
+  else if (kind === "bell") { S("path", {d: `M${cx - 20} ${cy + 12} Q${cx - 20} ${cy - 24} ${cx} ${cy - 24} Q${cx + 20} ${cy - 24} ${cx + 20} ${cy + 12} Z`, fill: col}, t); S("rect", {x: cx - 26, y: cy + 10, width: 52, height: 6, rx: 3, fill: col}, t); S("circle", {cx, cy: cy + 22, r: 6, fill: col}, t); }
+  else { // upload
+    S("path", {d: `M${cx - 22} ${cy + 6} L${cx - 22} ${cy + 20} L${cx + 22} ${cy + 20} L${cx + 22} ${cy + 6}`, stroke: col, "stroke-width": 5, fill: "none", "stroke-linecap": "round", "stroke-linejoin": "round"}, t);
+    S("path", {d: `M${cx} ${cy + 8} L${cx} ${cy - 22} M${cx - 12} ${cy - 10} L${cx} ${cy - 22} L${cx + 12} ${cy - 10}`, stroke: W, "stroke-width": 5, fill: "none", "stroke-linecap": "round", "stroke-linejoin": "round"}, t);
+  }
+}
+function buildSetup() {
+  const g = $("product"); motion.set(g, {opacity: 0});
+  S("rect", {x: 0, y: 0, width: 1920, height: 1080, fill: "url(#darkglow)"}, g);
+  S("rect", {x: 0, y: 0, width: 1920, height: 1080, fill: "url(#dots)", opacity: .7}, g);
+}
+function animSetup() {
+  const g = $("product"), b = B.setup, s = b.start;
+  particles(g, s - .3, B.result.start + .5, 34);
+  const core = S("g", {id: "core"}, g);
+  S("circle", {cx: 960, cy: 520, r: 270, fill: "url(#glow)"}, core);
+  const ring = S("circle", {cx: 960, cy: 520, r: 168, fill: mix(C.bg, C.accent, .12), stroke: C.accent, "stroke-width": 3}, core);
+  const orbit = S("circle", {id: "orbit", cx: 960, cy: 520, r: 214, fill: "none", stroke: C.accent2, "stroke-width": 3, "stroke-dasharray": "6 16", opacity: .8}, core);
+  const mark = logoMark(core, 960, 512, .82);
+  const word = S("text", {x: 960, y: 760, "text-anchor": "middle", "font-family": FONT.disp, "font-weight": 700, "font-size": 50, "letter-spacing": 10, fill: "#FFFFFF"}, core, BR.wordmark);
+  motion.set(core, {scale: .6, opacity: 0, svgOrigin: "960 520"});
+  tl.to(core, {scale: 1, opacity: 1, duration: .7, ease: "back.out(1.7)"}, s + .05); cue(s + .05, "chime");
+  drawLogo(mark, s + .2);
+  tl.to(orbit, {rotation: 240, svgOrigin: "960 520", duration: b.dur + 3, ease: "none"}, s);
+  const cols = [C.sun, C.alt, C.accent2, C.coral, C.soft];
+  const ins = SETUP.inputs.slice(0, 5);
+  const gap = ins.length > 1 ? Math.min(140, 560 / (ins.length - 1)) : 0, y0 = 530 - gap * (ins.length - 1) / 2;
+  const tiles = ins.map(([kind, name], i) => {
+    const y = y0 + i * gap, t = S("g", {}, g);
+    S("rect", {x: 250, y: y - 48, width: 96, height: 96, rx: 22, fill: mix(C.bg, "#ffffff", .07), stroke: C.line, "stroke-width": 2}, t);
+    glyph(t, kind, 298, y, cols[i % cols.length]);
+    S("text", {x: 230, y: y + 9, "text-anchor": "end", "font-family": FONT.body, "font-weight": 600, "font-size": 26, fill: mix(C.text, C.bg, .15)}, t, name);
+    motion.set(t, {x: -420, opacity: 0});
+    tl.to(t, {x: 0, opacity: 1, duration: .5, ease: "power3.out"}, s + .35 + i * .09);
+    return [346, y];
+  });
+  for (let i = 0; i < 15; i++) {
+    const [sx, sy] = tiles[i % tiles.length], c = card(g, 62, 80);
+    const t0 = s + .9 + i * .16, o = {k: 0};
+    motion.set(c, {x: sx, y: sy, opacity: 0, scale: .9});
+    tl.set(c, {opacity: 1}, t0);
+    tl.to(o, {k: 1, duration: .75, ease: "power2.in", onUpdate() {
+      const k = o.k, cx = 650, cy = sy < 520 ? 200 : 860, ex = 960, ey = 520;
+      const x = (1 - k) ** 2 * sx + 2 * (1 - k) * k * cx + k * k * ex, y = (1 - k) ** 2 * sy + 2 * (1 - k) * k * cy + k * k * ey;
+      motion.set(c, {x, y, scale: .9 - .7 * k, rotation: 20 * k, opacity: k > .92 ? (1 - k) * 12 : 1});
+    }}, t0);
+    if (i % 3 === 0) cue(t0 + .7, "tick");
+  }
+  tl.to(ring, {attr: {r: 178}, duration: .18, yoyo: true, repeat: 7, ease: "sine.inOut"}, s + 1.6);
+  const out = SETUP.items.slice(0, 3).map(([name, tags]) => [name, (tags || []).slice(0, 3).map((t, k) => [t, [C.accent2, C.alt, C.warm][k]])]);
+  out.forEach(([name, chips], i) => {
+    const y = 300 + i * 200, cg = S("g", {}, g);
+    S("rect", {x: 1290, y: y - 70, width: 500, height: 150, rx: 22, fill: "#F5F6FC", filter: "url(#softdark)"}, cg);
+    S("rect", {x: 1316, y: y - 48, width: 40, height: 40, rx: 10, fill: [C.accent, C.alt, C.warm][i % 3]}, cg);
+    S("path", {d: `M${1326} ${y - 28} L${1334} ${y - 20} L${1347} ${y - 36}`, stroke: "#FFFFFF", "stroke-width": 4, fill: "none", "stroke-linecap": "round", "stroke-linejoin": "round"}, cg);
+    S("text", {x: 1372, y: y - 18, "font-family": FONT.body, "font-weight": 600, "font-size": 25, fill: C.dark}, cg, name);
+    const scan = S("rect", {x: 1290, y: y - 70, width: 8, height: 150, rx: 4, fill: C.alt, opacity: .0}, cg);
+    let cx = 1316;
+    const chipRow = S("g", {}, cg);
+    const chipEls = chips.map(([txt, col]) => { const c = chip(chipRow, cx, y + 40, txt, col); cx += c.w + 12; return c.g; });
+    if (cx > 1776) chipRow.setAttribute("transform", `translate(1316 ${y + 40}) scale(${(1776 - 1316) / (cx - 1316)}) translate(-1316 ${-(y + 40)})`);
+    const tIn = s + 3.0 + i * .28;
+    motion.set(cg, {x: -330, scale: .4, opacity: 0, svgOrigin: "1290 " + y});
+    tl.to(cg, {x: 0, scale: 1, opacity: 1, duration: .55, ease: "power3.out"}, tIn); cue(tIn, "swish");
+    tl.to(scan, {opacity: .9, duration: .05}, tIn + .45);
+    tl.to(scan, {x: 492, duration: .55, ease: "power1.inOut"}, tIn + .45);
+    tl.to(scan, {opacity: 0, duration: .1}, tIn + 1.0);
+    motion.set(chipEls, {scale: 0, transformOrigin: "left center"});
+    chipEls.forEach((c, k) => { const tc = s + 4.05 + i * .2 + k * .14; tl.to(c, {scale: 1, duration: .32, ease: "back.out(3)"}, tc); if (k === 0) cue(tc, "pop"); });
+  });
+  const sync = S("g", {id: "sync"}, g);
+  const sbg = S("rect", {x: 820, y: 830, width: 280, height: 64, rx: 32, fill: mix(C.bg, C.alt, .2), stroke: C.alt, "stroke-width": 2}, sync);
+  const st = S("text", {x: 892, y: 871, "font-family": FONT.body, "font-weight": 600, "font-size": 27, fill: mix(C.alt, "#ffffff", .8)}, sync, SETUP.badge);
+  const sw = st.getComputedTextLength() + 100, sx = 960 - sw / 2, ax = sx + 42;
+  sbg.setAttribute("width", sw); sbg.setAttribute("x", sx); st.setAttribute("x", sx + 72);
+  const arr = S("g", {}, sync);
+  S("path", {d: `M${ax} 846 A16 16 0 1 1 ${ax - 16} 862`, stroke: C.alt, "stroke-width": 5, fill: "none", "stroke-linecap": "round"}, arr);
+  S("path", {d: `M${ax - 22} 852 L${ax - 16} 864 L${ax - 6} 856`, stroke: C.alt, "stroke-width": 5, fill: "none", "stroke-linecap": "round", "stroke-linejoin": "round"}, arr);
+  motion.set(sync, {opacity: 0, y: 20});
+  tl.to(sync, {opacity: 1, y: 0, duration: .45, ease: "back.out(2)"}, s + 5.0); cue(s + 5.0, "sparkle");
+  tl.to(arr, {rotation: 720, svgOrigin: `${ax} 862`, duration: 3, ease: "power1.inOut"}, s + 5.0);
+  tl.to(word, {opacity: 1}, s);
+  const ex = B.result.start;
+  tl.to(g.querySelectorAll(":scope > g:not(#core)"), {opacity: 0, duration: .4}, ex - .4);
+  tl.to(core, {scale: .2, x: -650, y: -400, opacity: 0, duration: .6, ease: "power3.in"}, ex - .45); cue(ex - .45, "whoosh");
+  tl.set("#app", {opacity: 1}, ex - .2);
+}
+
+/* ================= SCENE 6: THE RESULT (motion graphics, one of four app kinds) ================= */
+function buildApp() {
+  const g = $("app"); motion.set(g, {opacity: 0});
+  S("rect", {x: 0, y: 0, width: 1920, height: 1080, fill: "url(#darkglow)"}, g);
+  S("rect", {x: 0, y: 0, width: 1920, height: 1080, fill: "url(#dots)", opacity: .7}, g);
+}
+/* ---------- polish ---------- */
+function particles(parent, t0, t1, n = 34) {
+  const g = S("g", {opacity: .9}, parent);
+  for (let i = 0; i < n; i++) {
+    const x = 40 + rnd() * 1840, y = 80 + rnd() * 960, r = 1.4 + rnd() * 3.2, col = [C.accent2, C.alt, C.muted][i % 3];
+    const c = S("circle", {cx: x, cy: y, r, fill: col, opacity: (.15 + rnd() * .45).toFixed(2)}, g);
+    tl.fromTo(c, {x: 0, y: 0}, {x: (rnd() - .5) * 80, y: -(60 + rnd() * 160), duration: t1 - t0, ease: "none"}, t0);
+  }
+  return g;
+}
+function glint(parent, path, t, times = 2) {
+  const d = S("circle", {r: 8, fill: mix(C.alt, "#ffffff", .8), filter: "url(#neon)", opacity: 0}, parent), L = path.getTotalLength(), o = {k: 0};
+  tl.set(d, {opacity: 1}, t);
+  tl.to(o, {k: 1, duration: .7, ease: "power1.inOut", repeat: times - 1, onUpdate() { const p = path.getPointAtLength(L * o.k); d.setAttribute("cx", p.x); d.setAttribute("cy", p.y); }}, t);
+  tl.set(d, {opacity: 0}, t + .7 * times);
+}
+function shimmer(parent, x, y, w, h, t) {
+  const id = "sh" + Math.round(rnd() * 1e9), defs = document.querySelector("defs");
+  const gr = S("linearGradient", {id: id + "g", x1: 0, y1: 0, x2: 1, y2: 0}, defs);
+  for (const [o, a] of [[0, 0], [.5, .28], [1, 0]]) S("stop", {offset: o, "stop-color": "#FFFFFF", "stop-opacity": a}, gr);
+  const cp = S("clipPath", {id: id + "c"}, defs); S("rect", {x, y, width: w, height: h, rx: 24}, cp);
+  const band = S("rect", {x: x - 260, y, width: 220, height: h, fill: `url(#${id}g)`, "clip-path": `url(#${id}c)`}, parent);
+  tl.fromTo(band, {x: 0}, {x: w + 300, duration: .8, ease: "power2.inOut"}, t);
+}
+function confetti(parent, cx, cy, t) {
+  const cols = [C.accent2, C.alt, C.sun, C.coral, C.soft, "#FFFFFF"];
+  for (let i = 0; i < 26; i++) {
+    const a = -Math.PI / 2 + (rnd() - .5) * 2.4, v = 220 + rnd() * 260, piece = S("rect", {x: cx - 5, y: cy - 8, width: 10, height: 16, rx: 2, fill: cols[i % 6]}, parent);
+    const o = {k: 0}, rot = (rnd() - .5) * 900;
+    motion.set(piece, {opacity: 0});
+    tl.set(piece, {opacity: 1}, t);
+    tl.to(o, {k: 1, duration: 1.3, ease: "none", onUpdate() { const k = o.k, x = Math.cos(a) * v * k, y = Math.sin(a) * v * k + 520 * k * k; motion.set(piece, {x, y, rotation: rot * k, opacity: k > .75 ? (1 - k) * 4 : 1}); }}, t);
+  }
+  cue(t, "sparkle");
+}
+function words(parent, x, y, str, size, col, weight = 500) {
+  const t = S("text", {x, y, "font-family": FONT.body, "font-weight": weight, "font-size": size, fill: col}, parent);
+  return str.split(" ").map((w, i) => S("tspan", {}, t, (i ? " " : "") + w));
+}
+function fitText(el, maxw) { const w = el.getComputedTextLength(); if (w > maxw) el.setAttribute("textLength", maxw), el.setAttribute("lengthAdjust", "spacingAndGlyphs"); }
+/* the answer block: two [bold, detail] lines that build word by word, with numbered badges */
+function resultBlock(panel, s, y0) {
+  const ab = S("g", {}, panel);
+  S("rect", {x: 240, y: y0, width: 860, height: 280, rx: 24, fill: C.panel2}, ab);
+  const res = APP.result.slice(0, 2);
+  const lines = [];
+  res.forEach(([bold, detail], k) => { lines.push([286, y0 + 56 + k * 132, bold, 28, "#FFFFFF", 700]); lines.push([286, y0 + 98 + k * 132, detail, 27, mix(C.text, C.bg, .2), 500]); });
+  const tsp = lines.flatMap(([x, y, str, sz, col, w]) => words(ab, x, y, str, sz, col, w));
+  motion.set(ab, {opacity: 0, y: 20}); motion.set(tsp, {opacity: 0});
+  tl.to(ab, {opacity: 1, y: 0, duration: .3}, s);
+  shimmer(ab, 240, y0, 860, 280, s + 1.55);
+  tsp.forEach((w, i) => tl.to(w, {opacity: 1, duration: .12}, s + .1 + i * Math.min(.07, 1.6 / tsp.length)));
+  return res.map((_, k) => [1030, y0 + 86 + k * 132]);
+}
+function badges(panel, at, t) {
+  return at.map(([x, y], i) => {
+    const bg = S("g", {}, panel);
+    S("circle", {cx: x, cy: y, r: 22, fill: C.alt}, bg);
+    S("text", {x, y: y + 8, "text-anchor": "middle", "font-family": FONT.disp, "font-weight": 700, "font-size": 24, fill: C.bg}, bg, String(i + 1));
+    motion.set(bg, {scale: 0, svgOrigin: `${x} ${y}`});
+    tl.to(bg, {scale: 1, duration: .35, ease: "back.out(3)"}, t + i * .2); cue(t + i * .2, "pop");
+    return bg;
+  });
+}
+/* side cards on the right, linked from the badges */
+function sideCards(g, from, s) {
+  const cards = APP.cards.slice(0, 2);
+  const pos = [[1290, 150], [1480, 520]];
+  const ends = cards.map(([title, meta], i) => {
+    const [x, y] = pos[i], hl = i ? 5 : 3, pgG = S("g", {}, g);
+    S("rect", {x, y, width: 360, height: 440, rx: 14, fill: "#FFFFFF", filter: "url(#softdark)"}, pgG);
+    const tt = S("text", {x: x + 24, y: y + 44, "font-family": FONT.body, "font-weight": 700, "font-size": 21, fill: C.dark}, pgG, title);
+    fitText(tt, 230);
+    S("text", {x: x + 336, y: y + 44, "text-anchor": "end", "font-family": FONT.body, "font-weight": 600, "font-size": 20, fill: "#818AA3"}, pgG, meta);
+    for (let k = 0; k < 12; k++) S("rect", {x: x + 24, y: y + 74 + k * 28, width: 312 - (k % 3) * 40, height: 9, rx: 4.5, fill: "#DDE1EE"}, pgG);
+    const hlr = S("rect", {x: x + 16, y: y + 64 + hl * 28, width: 0, height: 28, rx: 6, fill: C.alt, opacity: .35}, pgG);
+    motion.set(pgG, {x: 260, opacity: 0, rotation: 4, svgOrigin: `${x + 180} ${y + 220}`});
+    tl.to(pgG, {x: 0, opacity: 1, rotation: i ? -2 : 2, duration: .55, ease: "power3.out"}, s + 4.55 + i * .2);
+    tl.to(hlr, {attr: {width: 328}, duration: .55, ease: "power2.inOut"}, s + 5.6 + i * .3);
+    return [x, y + 78 + hl * 28];
+  });
+  from.slice(0, ends.length).forEach(([bx, by], i) => {
+    const [px, py] = ends[i];
+    const p = S("path", {d: `M${bx + 22} ${by} C${bx + 142} ${by} ${px - 120} ${py} ${px + 8} ${py}`, stroke: C.alt, "stroke-width": 4, fill: "none"}, g);
+    const L = p.getTotalLength(); motion.set(p, {strokeDasharray: L, strokeDashoffset: L});
+    tl.to(p, {strokeDashoffset: 0, duration: .55, ease: "power2.inOut"}, s + 5.0 + i * .3);
+    glint(g, p, s + 5.6 + i * .3, 2);
+    if (i === 0) cue(s + 5.0, "swish");
+  });
+}
+/* a summary card on the right (form, dashboard and checklist kinds) */
+function summaryCard(g, s) {
+  const c = S("g", {}, g);
+  S("rect", {x: 1250, y: 300, width: 560, height: 420, rx: 28, fill: "#FFFFFF", filter: "url(#softdark)"}, c);
+  S("circle", {cx: 1310, cy: 370, r: 30, fill: C.alt}, c);
+  S("path", {d: "M1296 370 L1306 381 L1326 358", stroke: "#FFFFFF", "stroke-width": 6, fill: "none", "stroke-linecap": "round", "stroke-linejoin": "round"}, c);
+  const h = S("text", {x: 1356, y: 380, "font-family": FONT.disp, "font-weight": 700, "font-size": 30, fill: C.dark}, c, APP.summaryTitle || "Done");
+  fitText(h, 420);
+  APP.result.slice(0, 2).forEach(([bold, detail], k) => {
+    const b = S("text", {x: 1290, y: 470 + k * 120, "font-family": FONT.body, "font-weight": 700, "font-size": 25, fill: C.dark}, c, bold); fitText(b, 480);
+    const d = S("text", {x: 1290, y: 506 + k * 120, "font-family": FONT.body, "font-weight": 500, "font-size": 23, fill: "#5E6580"}, c, detail); fitText(d, 480);
+  });
+  motion.set(c, {x: 240, opacity: 0, rotation: 3, svgOrigin: "1530 510"});
+  tl.to(c, {x: 0, opacity: 1, rotation: 0, duration: .6, ease: "power3.out"}, s); cue(s, "swish");
+  return c;
+}
+function appPanel(g, s) {
+  const panel = S("g", {}, g);
+  S("rect", {x: 200, y: 140, width: 960, height: 800, rx: 34, fill: C.panel, stroke: C.line, "stroke-width": 2, filter: "url(#softdark)"}, panel);
+  logoMark(panel, 262, 206, .2, false);
+  S("text", {x: 300, y: 216, "font-family": FONT.disp, "font-weight": 700, "font-size": 30, "letter-spacing": 4, fill: "#FFFFFF"}, panel, BR.wordmark);
+  S("text", {x: 1120, y: 216, "text-anchor": "end", "font-family": FONT.body, "font-weight": 500, "font-size": 22, fill: C.muted}, panel, APP.title);
+  S("line", {x1: 200, y1: 258, x2: 1160, y2: 258, stroke: C.line, "stroke-width": 2}, panel);
+  motion.set(panel, {y: 60, opacity: 0, scale: .96, svgOrigin: "680 540"});
+  tl.to(panel, {y: 0, opacity: 1, scale: 1, duration: .55, ease: "power3.out"}, s - .15);
+  return panel;
+}
+/* typed text with a caret; returns the time typing ends */
+function typeInto(parent, x, y, str, size, t, dur) {
+  const typed = S("text", {x, y, "font-family": FONT.body, "font-weight": 500, "font-size": size, fill: C.text}, parent, "");
+  const caret = S("rect", {x, y: y - size * .92, width: 3, height: size * 1.2, fill: C.accent2}, parent);
+  motion.set(caret, {opacity: 0});
+  tl.set(caret, {opacity: 1}, t);
+  const o = {n: 0};
+  tl.to(o, {n: str.length, duration: dur, ease: "none", onUpdate() {
+    typed.textContent = str.slice(0, Math.round(o.n));
+    caret.setAttribute("x", x + 2 + typed.getComputedTextLength());
+  }}, t);
+  for (let k = 0; k < Math.min(8, Math.ceil(dur / .18)); k++) cue(t + .05 + k * .18, "click");
+  tl.set(caret, {opacity: 0}, t + dur + .1);
+  return {typed, caret, end: t + dur};
+}
+function kindChat(g, panel, s) {
+  const inp = S("g", {}, panel);
+  S("rect", {x: 240, y: 840, width: 880, height: 70, rx: 35, fill: C.panel2, stroke: C.line, "stroke-width": 2}, inp);
+  const ph = S("text", {x: 280, y: 885, "font-family": FONT.body, "font-weight": 500, "font-size": 27, fill: C.muted}, inp, APP.placeholder || "Ask or tell it what you need…");
+  tl.set(ph, {opacity: 0}, s + .25);
+  const Q = APP.request;
+  const ty = typeInto(inp, 280, 885, Q, 27, s + .25, 1.5);
+  const send = S("circle", {cx: 1080, cy: 875, r: 24, fill: C.accent}, inp);
+  S("path", {d: "M1070 875 L1090 875 M1082 866 L1091 875 L1082 884", stroke: "#FFFFFF", "stroke-width": 4, fill: "none", "stroke-linecap": "round", "stroke-linejoin": "round"}, inp);
+  tl.to(send, {scale: 1.25, svgOrigin: "1080 875", duration: .12, yoyo: true, repeat: 1}, s + 1.85); cue(s + 1.85, "swish");
+  tl.set(ty.typed, {opacity: 0}, s + 1.95);
+  const ub = S("g", {}, panel);
+  const ubr = S("rect", {x: 450, y: 290, width: 670, height: 62, rx: 22, fill: C.accent}, ub);
+  const ubt = S("text", {x: 1094, y: 330, "text-anchor": "end", "font-family": FONT.body, "font-weight": 500, "font-size": 25, fill: "#FFFFFF"}, ub, Q);
+  fitText(ubt, 820);
+  const ubw = Math.min(ubt.getComputedTextLength(), 820) + 52; ubr.setAttribute("width", ubw); ubr.setAttribute("x", 1120 - ubw);
+  motion.set(ub, {opacity: 0, y: 540});
+  tl.to(ub, {opacity: 1, y: 0, duration: .45, ease: "power3.out"}, s + 1.95);
+  const at = resultBlock(panel, s + 2.35, 384);
+  badges(panel, at, s + 4.3);
+  sideCards(g, at, s);
+}
+function kindForm(g, panel, s) {
+  const fields = APP.fields.slice(0, 4);
+  let t = s + .25;
+  fields.forEach(([label, value], i) => {
+    const y = 320 + i * 120, f = S("g", {}, panel);
+    S("text", {x: 250, y, "font-family": FONT.body, "font-weight": 600, "font-size": 22, fill: C.muted}, f, label);
+    const box = S("rect", {x: 240, y: y + 16, width: 880, height: 64, rx: 16, fill: C.panel2, stroke: C.line, "stroke-width": 2}, f);
+    motion.set(f, {opacity: 0, x: -30});
+    tl.to(f, {opacity: 1, x: 0, duration: .35, ease: "power3.out"}, s + i * .12);
+    tl.to(box, {attr: {stroke: C.accent2}, duration: .15}, t);
+    const ty = typeInto(f, 270, y + 58, String(value), 26, t, Math.max(.35, Math.min(.8, String(value).length * .05)));
+    tl.to(box, {attr: {stroke: C.line}, duration: .2}, ty.end + .05);
+    t = ty.end + .12;
+  });
+  const btn = S("g", {}, panel);
+  S("rect", {x: 840, y: 830, width: 280, height: 72, rx: 36, fill: C.accent}, btn);
+  S("text", {x: 980, y: 876, "text-anchor": "middle", "font-family": FONT.body, "font-weight": 700, "font-size": 27, fill: "#FFFFFF"}, btn, APP.button || "Submit");
+  motion.set(btn, {opacity: 0});
+  tl.to(btn, {opacity: 1, duration: .3}, s + .4);
+  tl.to(btn, {scale: .92, svgOrigin: "980 866", duration: .12, yoyo: true, repeat: 1}, t + .1); cue(t + .1, "click");
+  const spin = S("circle", {cx: 870, cy: 866, r: 0, fill: "none", stroke: "#FFFFFF", "stroke-width": 4}, btn);
+  tl.to(spin, {attr: {r: 14}, duration: .2}, t + .3);
+  tl.to(spin, {opacity: 0, duration: .2}, t + .9);
+  summaryCard(g, Math.max(t + .9, s + 3.2));
+}
+function kindDashboard(g, panel, s) {
+  const ms = APP.metrics.slice(0, 3);
+  ms.forEach(([label, value, unit], i) => {
+    const x = 240 + i * 300, y = 300, tile = S("g", {}, panel);
+    S("rect", {x, y, width: 280, height: 170, rx: 20, fill: C.panel2}, tile);
+    S("text", {x: x + 24, y: y + 46, "font-family": FONT.body, "font-weight": 600, "font-size": 21, fill: C.muted}, tile, label);
+    const num = S("text", {x: x + 24, y: y + 118, "font-family": FONT.disp, "font-weight": 700, "font-size": 56, fill: "#FFFFFF"}, tile, "0");
+    const u = S("text", {x: x + 24, y: y + 152, "font-family": FONT.body, "font-weight": 600, "font-size": 21, fill: C.alt}, tile, unit || "");
+    motion.set(tile, {opacity: 0, y: 20}); tl.to(tile, {opacity: 1, y: 0, duration: .4, ease: "power3.out"}, s + .2 + i * .15);
+    const o = {v: 0}, target = +value || 0, dec = String(value).includes(".") ? 1 : 0;
+    tl.to(o, {v: target, duration: 1.6, ease: "power2.out", onUpdate() { num.textContent = o.v.toFixed(dec); }}, s + .5 + i * .15);
+    void u;
+  });
+  // chart: a line that draws, bars that grow
+  const ch = S("g", {}, panel);
+  S("rect", {x: 240, y: 500, width: 880, height: 400, rx: 20, fill: C.panel2}, ch);
+  for (let k = 0; k < 4; k++) S("line", {x1: 280, y1: 560 + k * 80, x2: 1080, y2: 560 + k * 80, stroke: C.line, "stroke-width": 1.5}, ch);
+  const vals = [.3, .38, .34, .5, .47, .62, .7, .66, .82, .9];
+  vals.forEach((v, k) => {
+    const x = 300 + k * 78, h = v * 280, bar = S("rect", {x, y: 860 - h, width: 44, height: h, rx: 8, fill: k === vals.length - 1 ? C.alt : mix(C.accent, C.panel2, .35)}, ch);
+    motion.set(bar, {scaleY: 0, svgOrigin: `${x + 22} 860`});
+    tl.to(bar, {scaleY: 1, duration: .5, ease: "back.out(1.6)"}, s + 1.1 + k * .09);
+  });
+  const pts = vals.map((v, k) => [322 + k * 78, 860 - v * 280 - 30]);
+  const line = S("path", {d: "M" + pts.map(p => p.join(" ")).join(" L"), stroke: C.warm, "stroke-width": 6, fill: "none", "stroke-linecap": "round", "stroke-linejoin": "round"}, ch);
+  const L = line.getTotalLength(); motion.set(line, {strokeDasharray: L, strokeDashoffset: L});
+  tl.to(line, {strokeDashoffset: 0, duration: 1.4, ease: "power2.inOut"}, s + 1.4); cue(s + 1.4, "swish");
+  const dot = S("circle", {cx: pts[pts.length - 1][0], cy: pts[pts.length - 1][1], r: 12, fill: C.warm, stroke: "#FFFFFF", "stroke-width": 4}, ch);
+  motion.set(dot, {scale: 0, svgOrigin: `${pts[pts.length - 1][0]} ${pts[pts.length - 1][1]}`});
+  tl.to(dot, {scale: 1, duration: .35, ease: "back.out(3)"}, s + 2.8); cue(s + 2.8, "pop");
+  summaryCard(g, s + 3.3);
+}
+function kindChecklist(g, panel, s) {
+  const steps = APP.steps.slice(0, 5);
+  S("rect", {x: 240, y: 300, width: 880, height: 14, rx: 7, fill: C.panel2}, panel);
+  const bar = S("rect", {x: 240, y: 300, width: 0, height: 14, rx: 7, fill: C.alt}, panel);
+  const per = Math.min(.75, 3.2 / steps.length);
+  steps.forEach((label, i) => {
+    const y = 360 + i * 104, row = S("g", {}, panel);
+    S("rect", {x: 240, y, width: 880, height: 84, rx: 18, fill: C.panel2}, row);
+    const box = S("rect", {x: 266, y: y + 22, width: 40, height: 40, rx: 10, fill: "none", stroke: C.muted, "stroke-width": 3}, row);
+    const tick = S("path", {d: `M${276} ${y + 42} L${284} ${y + 51} L${298} ${y + 33}`, stroke: "#FFFFFF", "stroke-width": 5, fill: "none", "stroke-linecap": "round", "stroke-linejoin": "round"}, row);
+    const tx = S("text", {x: 330, y: y + 52, "font-family": FONT.body, "font-weight": 600, "font-size": 27, fill: C.text}, row, label);
+    fitText(tx, 760);
+    const TL = tick.getTotalLength(); motion.set(tick, {strokeDasharray: TL, strokeDashoffset: TL});
+    motion.set(row, {opacity: 0, x: -30});
+    tl.to(row, {opacity: 1, x: 0, duration: .35, ease: "power3.out"}, s + .1 + i * .1);
+    const tc = s + .8 + i * per;
+    tl.to(box, {attr: {fill: C.alt, stroke: C.alt}, duration: .15}, tc);
+    tl.to(tick, {strokeDashoffset: 0, duration: .25, ease: "power2.out"}, tc + .05); cue(tc, "tick");
+    tl.to(tx, {opacity: .6, duration: .3}, tc + .2);
+    tl.to(bar, {attr: {width: 880 * (i + 1) / steps.length}, duration: per * .8, ease: "power2.out"}, tc);
+  });
+  // the request that started the run, pressed at the start
+  const pill = S("g", {}, panel);
+  S("rect", {x: 240, y: 840, width: 880, height: 70, rx: 35, fill: C.panel2, stroke: C.line, "stroke-width": 2}, pill);
+  S("circle", {cx: 280, cy: 875, r: 22, fill: C.accent}, pill);
+  S("path", {d: "M273 864 L291 875 L273 886 Z", fill: "#FFFFFF"}, pill);
+  const rq = S("text", {x: 318, y: 884, "font-family": FONT.body, "font-weight": 500, "font-size": 27, fill: C.text}, pill, APP.request);
+  fitText(rq, 780);
+  motion.set(pill, {opacity: 0, y: 30});
+  tl.to(pill, {opacity: 1, y: 0, duration: .35, ease: "power3.out"}, s);
+  tl.to(pill, {scale: .97, svgOrigin: "680 875", duration: .1, yoyo: true, repeat: 1}, s + .45); cue(s + .45, "click");
+  summaryCard(g, s + .9 + steps.length * per);
+}
+function animApp() {
+  const g = $("app"), b = B.result, s = b.start;
+  particles(g, s - .3, s + RD + 3, 30);
+  const panel = appPanel(g, s);
+  const kind = APP.kind;
+  if (kind === "form") kindForm(g, panel, s);
+  else if (kind === "dashboard") kindDashboard(g, panel, s);
+  else if (kind === "checklist") kindChecklist(g, panel, s);
+  else kindChat(g, panel, s);
+  if (ARCH === "B") {
+    const done = S("g", {}, panel);
+    const dbg = S("rect", {x: 240, y: kind === "chat" ? 690 : 140 + 800 + 20, width: 330, height: 64, rx: 32, fill: mix(C.bg, C.alt, .2), stroke: C.alt, "stroke-width": 2}, done);
+    const dy = +dbg.getAttribute("y");
+    S("path", {d: `M266 ${dy + 32} L278 ${dy + 44} L298 ${dy + 22}`, stroke: C.alt, "stroke-width": 5, fill: "none", "stroke-linecap": "round", "stroke-linejoin": "round"}, done);
+    const dt = S("text", {x: 312, y: dy + 41, "font-family": FONT.body, "font-weight": 700, "font-size": 26, fill: mix(C.alt, "#ffffff", .8)}, done, UC.doneLabel || "Done at 3:04 PM");
+    dbg.setAttribute("width", dt.getComputedTextLength() + 100);
+    motion.set(done, {scale: 0, svgOrigin: `405 ${dy + 32}`});
+    tl.to(done, {scale: 1, duration: .45, ease: "back.out(2.4)"}, s + RD - 1.6); cue(s + RD - 1.6, "chime");
+  }
+  // the person again, happy
+  const m = S("g", {id: "happy"}, g);
+  S("circle", {cx: 1228, cy: 968, r: 64, fill: "#FFFFFF"}, m);
+  const mh = S("g", {transform: "translate(1228,975) scale(.5) translate(-960,-506)"}, m);
+  hairBack(mh, 960, 506);
+  S("ellipse", {cx: 960, cy: 506, rx: 78, ry: 88, fill: C.skin}, mh);
+  hairFront(mh, 960, 506); glasses(mh, 960, 506);
+  for (const x of [930, 990]) S("path", {d: `M${x - 10} 518 Q${x} 506 ${x + 10} 518`, stroke: "#1A1A24", "stroke-width": 6, fill: "none", "stroke-linecap": "round"}, mh);
+  S("path", {d: "M930 556 Q960 590 990 556", stroke: "#7A2E2E", "stroke-width": 6, fill: "#FFFFFF", "stroke-linecap": "round"}, mh);
+  motion.set(m, {scale: 0, svgOrigin: "1228 968"});
+  tl.to(m, {scale: 1, duration: .5, ease: "back.out(2.4)"}, s + 6.3); cue(s + 6.3, "sparkle");
+  tl.to(m, {rotation: -8, duration: .25, yoyo: true, repeat: 3, ease: "sine.inOut"}, s + 6.8);
+  confetti(g, 1228, 930, s + 6.4);
+
+  // ---- outro lockup ----
+  const e = s + RD + .15;
+  tl.to(g.querySelectorAll(":scope > *:not(rect)"), {opacity: 0, scale: .94, svgOrigin: "960 540", duration: .45, ease: "power2.in"}, e);
+  const out = $("outro");
+  const lock = S("g", {}, out);
+  const mk = logoMark(lock, 960, 430, .9);
+  const wm = S("text", {x: 960, y: 700, "text-anchor": "middle", "font-family": FONT.disp, "font-weight": 700, "font-size": 72, "letter-spacing": 16, fill: "#FFFFFF"}, lock, BR.wordmark);
+  const ww = Math.min(1400, wm.getComputedTextLength() + 80);
+  shimmer(lock, 960 - ww / 2, 630, ww, 90, e + 1.3);
+  S("text", {x: 960, y: 770, "text-anchor": "middle", "font-family": FONT.body, "font-weight": 500, "font-size": 34, fill: C.muted}, lock, BR.tagline);
+  if (BR.url) S("text", {x: 960, y: 830, "text-anchor": "middle", "font-family": FONT.body, "font-weight": 600, "font-size": 28, fill: C.accent2}, lock, BR.url);
+  motion.set(lock, {opacity: 0, scale: .9, svgOrigin: "960 560"});
+  drawLogo(mk, e + .45, .5);
+  tl.to(lock, {opacity: 1, scale: 1, duration: .6, ease: "power3.out"}, e + .4); cue(e + .4, "jingle_out");
+}
+
+/* ---------- build ---------- */
+async function main() {
+  await Promise.all([
+    document.fonts.load('700 40px "Space Grotesk"'), document.fonts.load('500 40px "IBM Plex Sans"'), document.fonts.load('600 40px "IBM Plex Sans"'),
+    document.fonts.load('700 40px "IBM Plex Sans"'), document.fonts.load('700 40px "Caveat"')]);
+  await document.fonts.ready;
+  if (UC.wall) { const st = document.querySelectorAll("#wall stop"); st[0].setAttribute("stop-color", UC.wall[0]); st[1].setAttribute("stop-color", UC.wall[1]); }
+  if (BR.logo) await new Promise(r => { const i = new Image(); i.onload = i.onerror = r; i.src = BR.logo; });
+  buildSetup(); buildApp(); buildBoard(); buildOffice();
+  if (ARCH === "B") animPing();
+  animOffice(); animBoard(); if (ARCH === "C") animSplit(); animSetup(); animApp();
+  tl.set({}, {}, TOTAL);
+  tl.seek(0);
+  window.TOTAL = TOTAL; window.SFX = SFX.sort((a, b) => a[0] - b[0]);
+  window.renderAt = t => { tl.seek(t); };
+  window.READY = true;
+}
+main();
+</script>
+</body></html>

@@ -1,0 +1,1165 @@
+<!doctype html>
+<!-- The animated presenter: a flat-vector character with a full rig (torso, neck, head, IK arms, parametric hands),
+     gestures, eye saccades, mood and lip-synced mouth shapes, entrance and exit. Characters: leo (default), leo-light,
+     leo-stubble, sam, ana, lee, maya, raj, kit, jo. One key light from the upper left, a soft cool rim light, three tones per
+     material, gradients and layered shapes only. No filters, no timers, no randomness: every frame is a pure function of t. -->
+<html><head><meta charset="utf-8">
+<style>
+  html, body { margin:0; background:transparent; width:560px; height:420px; overflow:hidden }
+  svg { display:block }
+</style></head>
+<body>
+<svg id="root" width="560" height="420" viewBox="-80 0 560 420" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="cheek" r="0.5"><stop offset="0" stop-color="var(--blush)" stop-opacity=".62"/><stop offset=".55" stop-color="var(--blush)" stop-opacity=".26"/><stop offset="1" stop-color="var(--blush)" stop-opacity="0"/></radialGradient>
+    <linearGradient id="shirtG" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="var(--shirtHi)"/><stop offset=".3" stop-color="var(--shirt)"/><stop offset=".7" stop-color="var(--shirt)"/><stop offset="1" stop-color="var(--shirt2)"/></linearGradient>
+    <!-- the neck: a soft cel shade from the lit left to the far right flank, and the gentle shadow the chin casts on it (fades out downward) -->
+    <linearGradient id="neckSideG" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="var(--skin2)" stop-opacity="0"/><stop offset=".42" stop-color="var(--skin2)" stop-opacity="0"/><stop offset=".78" stop-color="var(--skin2)" stop-opacity=".24"/><stop offset="1" stop-color="var(--skin2)" stop-opacity=".4"/></linearGradient>
+    <linearGradient id="neckChinG" gradientUnits="userSpaceOnUse" x1="0" y1="262" x2="0" y2="304"><stop offset="0" stop-color="var(--skinLine)" stop-opacity=".62"/><stop offset=".45" stop-color="var(--skinLine)" stop-opacity=".3"/><stop offset="1" stop-color="var(--skinLine)" stop-opacity="0"/></linearGradient>
+    <linearGradient id="neckCsG" gradientUnits="userSpaceOnUse" x1="0" y1="291" x2="0" y2="319"><stop offset="0" stop-color="var(--skinLine)" stop-opacity="0"/><stop offset="1" stop-color="var(--skinLine)" stop-opacity=".42"/></linearGradient>
+    <linearGradient id="foldG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--shirtLine)" stop-opacity=".5"/><stop offset="1" stop-color="var(--shirtLine)" stop-opacity="0"/></linearGradient>
+    <clipPath id="torsoClip"><path id="tcP" d="M92,446 L92,420 C92,362 118,320 152,306 L248,306 C282,320 308,362 308,420 L308,446 Z"/></clipPath>
+    <clipPath id="hmClip"><path id="hmClipP" d="M122,193 L121.4,176 C119,172 116.6,168 116.6,162 C116,152 118,144 121,138 C124,126 128,118 134,111 C142,100 152,90 164,82 C178,72 194,65 212,63 C236,61 258,72 270,96 C276,108 280,124 281.4,140 C282.6,152 283.4,158 283.4,162 C283.4,168 281,172 278.6,176 L278,193 L271.6,189.6 L271.6,154 C271.6,146 270,139 266,133 C261,125 255,118 247,111.6 C238,106 226,103.4 212,102.8 C200,102.4 187,102.6 177,104 C167,106 157,111 150,118 C142,125 134.6,134 130.6,144 L129,154 L128.6,189.6 Z"/></clipPath>
+    <clipPath id="faceClipS"><path id="faceClipP" d=""/></clipPath>
+    <clipPath id="hlClip"><path id="hlClipP" d=""/></clipPath>
+    <clipPath id="apL"><path id="apLp" d=""/></clipPath>
+    <clipPath id="apR"><path id="apRp" d=""/></clipPath>
+    <clipPath id="mcC"><ellipse cx="0" cy="3" rx="16" ry="8.5"/></clipPath>
+    <clipPath id="mcD"><path d="M-21,-1 Q-10,-6 0,-4 Q10,-6 21,-1 Q19,16 0,18 Q-19,16 -21,-1 Z"/></clipPath>
+    <clipPath id="mcE"><path d="M-11,2 Q-10,-4 0,-4 Q10,-4 11,2 Q10,10 0,11 Q-10,10 -11,2 Z"/></clipPath>
+    <clipPath id="mcH"><path d="M-16,0 Q-8,-5 0,-3.4 Q8,-5 16,0 Q13,11 0,12 Q-13,11 -16,0 Z"/></clipPath>
+  </defs>
+  <g id="all">
+    <g id="lean">
+      <!-- optional thin light "sticker" edge around the whole silhouette: the same shapes, dilated, under everything (geometry only, no filters) -->
+      <g id="stk" fill="var(--stk)" stroke="var(--stk)" stroke-linejoin="round" stroke-linecap="round" stroke-width="4.2" opacity=".62">
+        <path id="stkTorso" d="M92,446 L92,420 C92,362 118,320 152,306 L248,306 C282,320 308,362 308,420 L308,446 Z"/>
+        <g id="stkHead">
+          <path id="stkNeck" d=""/>
+          <ellipse id="stkEarL" cx="120" cy="186" rx="12" ry="17"/><ellipse id="stkEarR" cx="280" cy="186" rx="12" ry="17"/>
+          <path id="stkFace" d="M200,88 C256,88 280,132 280,184 C280,236 250,274 200,274 C150,274 120,236 120,184 C120,132 144,88 200,88 Z"/>
+          <g id="stkHairG"><path id="stkHairLong" d=""/><path id="stkHairMen" d="M122,193 L121.4,176 C119,172 116.6,168 116.6,162 C116,152 118,144 121,138 C124,126 128,118 134,111 C142,100 152,90 164,82 C178,72 194,65 212,63 C236,61 258,72 270,96 C276,108 280,124 281.4,140 C282.6,152 283.4,158 283.4,162 C283.4,168 281,172 278.6,176 L278,193 L271.6,189.6 L271.6,154 C271.6,146 270,139 266,133 C261,125 255,118 247,111.6 C238,106 226,103.4 212,102.8 C200,102.4 187,102.6 177,104 C167,106 157,111 150,118 C142,125 134.6,134 130.6,144 L129,154 L128.6,189.6 Z" style="display:none"/><g id="stkLegacy"></g></g>
+        </g>
+        <g id="stkArmL"></g><g id="stkArmR"></g>
+      </g>
+      <!-- torso (breathes): a slim tee, shaded from the upper left, with the neckline opening (skin) under the neck.
+           #torsoBody holds the body shapes (leo's shoulders are 2.8 units broader: a static x-scale of this group only) -->
+      <g id="torso">
+        <g id="torsoBody">
+          <path id="tFill" d="M92,446 L92,420 C92,362 118,320 152,306 L248,306 C282,320 308,362 308,420 L308,446 Z" fill="url(#shirtG)"/>
+          <g>
+            <path d="M92,446 L92,420 C92,404 94,392 98,382 C140,394 262,394 302,382 C306,392 308,404 308,420 L308,446 Z" fill="var(--shirtLine)" opacity=".16"/>
+            <path d="M256,312 C277,326 295,356 297,398 L303,430 L262,430 C268,396 266,352 256,312 Z" fill="var(--shirtLine)" opacity=".2"/>
+            <ellipse cx="176" cy="338" rx="26" ry="20" fill="var(--shirtHi)" opacity=".16"/>
+            <!-- cool rim light along the shoulders and the right edge: strong on the right, softer on the left, so the silhouette reads against a dark page -->
+            <path d="M305.4,436 L305.4,420 C305.4,364 282,324.5 249,309.4" fill="none" stroke="var(--shirtRim)" stroke-opacity=".85" stroke-width="4.6"/>
+            <path d="M94.8,436 L94.8,420 C94.8,366 118,326 152,311" fill="none" stroke="var(--shirtRim)" stroke-opacity=".42" stroke-width="3.6"/>
+          </g>
+          <path id="tOut" d="M92,446 L92,420 C92,362 118,320 152,306 L248,306 C282,320 308,362 308,420 L308,446 Z" fill="none" stroke="var(--shirtLine)" stroke-width="1.6" stroke-linejoin="round"/>
+        </g>
+        <!-- fabric folds: only where a tee really gathers, a few clean tapered shapes (thick at the underarm, fading into the chest), plus the
+             deeper gather under a lifted arm (#pitL/#pitR, driven by the arm angle) -->
+        <path d="M163,343 L171,339.4 C180,352 187,367 189,387 C176,375 166,359 163,343 Z" fill="var(--shirtLine)" opacity=".24"/>
+        <path d="M237,343 L229,339.4 C220,352 213,367 211,387 C224,375 234,359 237,343 Z" fill="var(--shirtLine)" opacity=".27"/>
+        <path d="M172.6,343.6 C180,354 185.6,367 187.4,382" fill="none" stroke="var(--shirtHi)" stroke-width="1.7" stroke-linecap="round" opacity=".3"/>
+        <path d="M150,404 C166,398 186,396 200,396 C214,396 234,398 250,404 L250,446 L150,446 Z" fill="var(--shirtLine)" opacity=".1"/>
+        <path id="pitL" d="M150,330 C160,332 168,340 172,356 C166,350 158,346 150,342 Z" fill="var(--shirtLine)" opacity="0"/>
+        <path id="pitR" d="M250,330 C240,332 232,340 228,356 C234,350 242,346 250,342 Z" fill="var(--shirtLine)" opacity="0"/>
+        <!-- the neckline opening: chest skin with the neck's contact shadow -->
+        <path d="M163,306 C168,318 184,326.5 200,326.5 C216,326.5 232,318 237,306 Z" fill="var(--skin)"/>
+        <path d="M168,306 C175,315 190,320 205,320 C216,320 226,316 234,306 Z" fill="var(--skinLine)" opacity=".4"/>
+        <!-- the back of the collar band, rising a little behind the neck: the neck enters the shirt instead of meeting a flat edge -->
+        <g id="badge" style="display:none"><circle cx="200" cy="384" r="23" fill="#ffffff"/><circle id="badgeRing" cx="200" cy="384" r="23" fill="none" stroke="#a9aecb" stroke-width="2.2"/><image id="badgeImg" href="" x="185" y="369" width="30" height="30" preserveAspectRatio="xMidYMid meet"/></g>
+        <g id="collarB">
+          <path d="M163,306 C163,296 180,290.6 200,290.6 C220,290.6 237,296 237,306 Z" fill="var(--shirtLine)"/>
+          <path d="M163,306 C163,296 180,290.6 200,290.6 C220,290.6 237,296 237,306" fill="none" stroke="var(--shirtLine)" stroke-width="10.6"/>
+          <path d="M163,306 C163,296 180,290.6 200,290.6 C220,290.6 237,296 237,306" fill="none" stroke="var(--shirt2)" stroke-width="8.4"/>
+          <path d="M163,306 C163,296 180,290.6 200,290.6 C220,290.6 237,296 237,306" fill="none" stroke="var(--shirtLine)" stroke-width="6.8" stroke-dasharray="0.9 2.5" opacity=".42"/>
+          <path d="M164.6,304.6 C165.4,297.6 181,293.4 200,293.4 C219,293.4 234.6,297.6 235.4,304.6" fill="none" stroke="var(--shirtHi)" stroke-width="1.4" stroke-linecap="round" opacity=".5"/>
+        </g>
+        <g id="phones" style="display:none">
+          <path d="M160,296 C156,330 172,344 200,344 C228,344 244,330 240,296" fill="none" stroke="#1b1f25" stroke-width="9" stroke-linecap="round"/>
+          <path d="M160,296 C156,330 172,344 200,344 C228,344 244,330 240,296" fill="none" stroke="#2a2f36" stroke-width="6.4" stroke-linecap="round"/>
+          <rect x="146" y="318" width="24" height="30" rx="8" fill="#2a2f36" stroke="#14181d" stroke-width="1.6"/><rect x="150" y="322" width="16" height="22" rx="6" fill="#4b5563"/>
+          <rect x="230" y="318" width="24" height="30" rx="8" fill="#2a2f36" stroke="#14181d" stroke-width="1.6"/><rect x="234" y="322" width="16" height="22" rx="6" fill="#4b5563"/>
+        </g>
+      </g>
+      <!-- head: pivots at the neck -->
+      <g id="head">
+        <!-- the neck: a soft column that widens a little into the collar (its shape is built per style by buildNeck), a cool-to-warm side shade, and the
+             gentle shadow the chin casts on it -->
+        <g id="neckG">
+          <path id="neckBase" d="" fill="var(--skin)"/>
+          <path id="neckSide" d="" fill="url(#neckSideG)"/>
+          <path id="neckChin" d="" fill="url(#neckChinG)"/>
+          <path id="neckCs" d="" fill="url(#neckCsG)"/>
+          <path id="neckRim" d="" fill="none" stroke="var(--rim)" stroke-width="2" stroke-linecap="round" opacity=".26"/>
+        </g>
+        <g id="ears">
+          <ellipse id="earL" cx="120" cy="186" rx="12" ry="17" fill="var(--skin)" stroke="var(--skinLine)" stroke-width="1.5"/><ellipse id="earR" cx="280" cy="186" rx="12" ry="17" fill="var(--skin)" stroke="var(--skinLine)" stroke-width="1.5"/>
+          <ellipse id="earLi" cx="121" cy="188" rx="6" ry="9" fill="var(--skin2)" opacity=".8"/><ellipse id="earRi" cx="279" cy="188" rx="6" ry="9" fill="var(--skin2)" opacity=".8"/>
+        </g>
+        <!-- the face: base, soft key-light shading, cel shade on the far side, contact shadow of the hairline, outline, cool rim light -->
+        <path id="face" d="M200,88 C256,88 280,132 280,184 C280,236 250,274 200,274 C150,274 120,236 120,184 C120,132 144,88 200,88 Z" fill="var(--skin)"/>
+        <g>
+          <path id="fsh1" d="M200,88 C256,88 280,132 280,184 C280,236 250,274 200,274 C230,270 250,246 255,204 C257,160 246,116 222,93 C214,90 208,89 200,88 Z" fill="var(--skin2)" opacity=".11"/>
+          <path id="fsh2" d="M200,88 C256,88 280,132 280,184 C280,236 250,274 200,274 C238,266 262,232 264,186 C266,146 256,112 232,96 C222,92 212,89 200,88 Z" fill="var(--skin2)" opacity=".2"/>
+          <path id="fsh3" d="M140,242 C158,266 182,274 200,274 C222,274 246,264 262,240 C244,260 222,264 200,264 C178,264 158,258 140,242 Z" fill="var(--skin2)" opacity=".3"/>
+          <ellipse cx="170" cy="130" rx="40" ry="22" fill="var(--skinHi)" opacity=".1" transform="rotate(-14 170 130)"/><ellipse cx="168" cy="128" rx="25" ry="12" fill="var(--skinHi)" opacity=".12" transform="rotate(-14 168 128)"/>
+          <ellipse id="fsh4" cx="200" cy="262" rx="26" ry="5" fill="var(--skin2)" opacity=".2"/>
+          <path id="faceRim" d="" fill="none" stroke="var(--rim)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" opacity=".3"/>
+        </g>
+        <path id="faceOut" d="M200,88 C256,88 280,132 280,184 C280,236 250,274 200,274 C150,274 120,236 120,184 C120,132 144,88 200,88 Z" fill="none" stroke="var(--skinLine)" stroke-width="1.5" stroke-linejoin="round"/>
+        <g id="earrings" style="display:none">
+          <g id="earringL"><circle id="earringLs" cx="120" cy="203.6" r="3.3" fill="#e3b341" stroke="#9a7116" stroke-width="1"/><circle cx="118.9" cy="202.4" r="1" fill="#fff3c4" opacity=".85"/></g>
+          <g id="earringR"><circle id="earringRs" cx="280" cy="203.6" r="3.3" fill="#e3b341" stroke="#9a7116" stroke-width="1"/><circle cx="278.9" cy="202.4" r="1" fill="#fff3c4" opacity=".85"/></g>
+        </g>
+        <path id="beard" style="display:none" d="M134,192 C136,250 168,278 200,278 C232,278 264,250 266,192 C256,234 234,254 200,254 C166,254 144,234 134,192 Z" fill="var(--hair)" opacity=".9"/>
+        <!-- leo-stubble: a light 5 o'clock shadow on the jaw and chin (a flat tint clipped to the face; the upper-lip band sits in #jaw and follows it) -->
+        <g id="stubble" style="display:none" clip-path="url(#faceClipS)">
+          <path id="stbJaw" d="" fill="var(--hair)" opacity=".13"/>
+          <path id="stbJaw2" d="" fill="var(--hair)" opacity=".09"/>
+        </g>
+        <!-- features slide sideways for a 2.5D head turn -->
+        <g id="features">
+          <g id="freckles" style="display:none" fill="var(--skin2)" opacity=".8">
+            <circle cx="146" cy="214" r="1.7"/><circle cx="154" cy="222" r="1.5"/><circle cx="162" cy="214" r="1.6"/><circle cx="150" cy="230" r="1.4"/>
+            <circle cx="254" cy="214" r="1.7"/><circle cx="246" cy="222" r="1.5"/><circle cx="238" cy="214" r="1.6"/><circle cx="250" cy="230" r="1.4"/>
+            <circle cx="196" cy="206" r="1.3"/><circle cx="206" cy="204" r="1.3"/></g>
+          <circle id="cheekL" cx="152" cy="218" r="18" fill="url(#cheek)"/><circle id="cheekR" cx="248" cy="218" r="18" fill="url(#cheek)"/>
+          <!-- soft lid creases above the eyes -->
+          <path d="M154,152 Q170,143 187,151" fill="none" stroke="var(--skinLine)" stroke-width="1.3" stroke-linecap="round" opacity=".32"/>
+          <path d="M213,151 Q230,143 246,152" fill="none" stroke="var(--skinLine)" stroke-width="1.3" stroke-linecap="round" opacity=".32"/>
+          <g id="brows">
+            <g id="browL"><path id="browLp" fill="var(--brow)"/><path id="browLh" fill="none" stroke="var(--hairHi)" stroke-width="1.1" stroke-linecap="round" opacity=".28"/></g>
+            <g id="browR"><path id="browRp" fill="var(--brow)"/><path id="browRh" fill="none" stroke="var(--hairHi)" stroke-width="1.1" stroke-linecap="round" opacity=".28"/></g>
+          </g>
+          <g id="eyes">
+            <g id="eyeL">
+              <g clip-path="url(#apL)">
+                <ellipse cx="170" cy="174" rx="19" ry="16" fill="#f9fafd"/>
+                <g id="irisGL">
+                  <circle cx="172" cy="175" r="9.5" fill="var(--iris)"/><path d="M162.6,173.4 A9.5,9.5 0 0 1 181.4,173.4 Q172,168.6 162.6,173.4 Z" fill="var(--irisD)" opacity=".55"/>
+                  <path d="M164.6,178.4 A8.2,8.2 0 0 0 179.4,178.4" fill="none" stroke="var(--irisM)" stroke-width="1.3" stroke-linecap="round" opacity=".55"/>
+                  <circle cx="172" cy="175" r="9.1" fill="none" stroke="var(--irisD)" stroke-width="1.2"/>
+                  <circle cx="173" cy="176" r="5" fill="var(--pupil)"/>
+                  <circle cx="176" cy="171" r="2.8" fill="#fff"/><circle cx="169" cy="179" r="1.3" fill="#fff" opacity=".8"/>
+                </g>
+                <path id="shadL" fill="none" stroke="#1c1020" stroke-width="8" opacity=".12"/>
+              </g>
+              <path id="lowL" fill="none" stroke="var(--skinLine)" stroke-width="1.1" stroke-linecap="round" opacity=".4"/>
+              <g id="lashL"><path id="lineL" fill="none" stroke="var(--brow)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" opacity=".88"/><path id="lsL" fill="none" stroke="var(--brow)" stroke-width="1.25" stroke-linecap="round" opacity=".85"/></g>
+            </g>
+            <g id="eyeR">
+              <g clip-path="url(#apR)">
+                <ellipse cx="230" cy="174" rx="19" ry="16" fill="#f9fafd"/>
+                <g id="irisGR">
+                  <circle cx="232" cy="175" r="9.5" fill="var(--iris)"/><path d="M222.6,173.4 A9.5,9.5 0 0 1 241.4,173.4 Q232,168.6 222.6,173.4 Z" fill="var(--irisD)" opacity=".55"/>
+                  <path d="M224.6,178.4 A8.2,8.2 0 0 0 239.4,178.4" fill="none" stroke="var(--irisM)" stroke-width="1.3" stroke-linecap="round" opacity=".55"/>
+                  <circle cx="232" cy="175" r="9.1" fill="none" stroke="var(--irisD)" stroke-width="1.2"/>
+                  <circle cx="233" cy="176" r="5" fill="var(--pupil)"/>
+                  <circle cx="236" cy="171" r="2.8" fill="#fff"/><circle cx="229" cy="179" r="1.3" fill="#fff" opacity=".8"/>
+                </g>
+                <path id="shadR" fill="none" stroke="#1c1020" stroke-width="8" opacity=".12"/>
+              </g>
+              <path id="lowR" fill="none" stroke="var(--skinLine)" stroke-width="1.1" stroke-linecap="round" opacity=".4"/>
+              <g id="lashR"><path id="lineR" fill="none" stroke="var(--brow)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" opacity=".88"/><path id="lsR" fill="none" stroke="var(--brow)" stroke-width="1.25" stroke-linecap="round" opacity=".85"/></g>
+            </g>
+          </g>
+          <g id="glasses" style="display:none" fill="none" stroke="#2b2b2b" stroke-width="3.5">
+            <rect x="148" y="158" width="44" height="32" rx="10"/><rect x="208" y="158" width="44" height="32" rx="10"/><path d="M192,172 L208,172 M148,170 L124,164 M252,170 L276,164"/></g>
+          <!-- nose: a simple curve with a soft shade on the far side, a tip highlight and a nostril hint (noseM: leo's, a touch larger and straighter) -->
+          <g id="noseF">
+            <path d="M203,190 C207,198 210,205 208.4,210.6 Q205,215.4 199.4,214 C203.6,210 204.4,200 203,190 Z" fill="var(--skin2)" opacity=".34"/>
+            <path d="M199,188 C194,200 190,210 199,214 Q205,216 207,211" stroke="var(--skin2)" stroke-width="3.2" stroke-linecap="round" fill="none"/>
+            <path d="M199.4,191 C196.4,199 194,205 195.4,209" stroke="var(--skinHi)" stroke-width="1.5" stroke-linecap="round" fill="none" opacity=".42"/>
+            <ellipse cx="199.6" cy="208" rx="2.5" ry="1.7" fill="var(--skinHi)" opacity=".5"/>
+            <path d="M201,216 Q205,217.4 208.6,213.6" stroke="var(--skinLine)" stroke-width="1.2" stroke-linecap="round" fill="none" opacity=".5"/>
+          </g>
+          <g id="noseM" style="display:none">
+            <path d="M203.6,191 C206.8,199 209.8,205 211.8,211 C210.8,215.8 207.4,218.2 203.6,218.2 C205.4,212 204.8,200 203.6,191 Z" fill="var(--skin2)" opacity=".28"/>
+            <path d="M200.6,189 C198.8,198 196.4,205.6 197.4,211 Q198.4,217.6 205,217.6 Q210.6,217.4 212,213" stroke="var(--skin2)" stroke-width="3.3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+            <path d="M200.8,192 C199.6,198 198.4,203.6 198.6,208.4" stroke="var(--skinHi)" stroke-width="1.6" stroke-linecap="round" fill="none" opacity=".42"/>
+            <ellipse cx="201.4" cy="210.6" rx="2.9" ry="1.9" fill="var(--skinHi)" opacity=".5"/>
+            <path d="M201.6,219.8 Q206.6,221 211.6,216.6" stroke="var(--skinLine)" stroke-width="1.2" stroke-linecap="round" fill="none" opacity=".5"/>
+          </g>
+          <!-- lower face moves with the jaw -->
+          <g id="jaw">
+            <path id="stbLip" d="" fill="var(--hair)" opacity=".12" style="display:none"/>
+            <g id="mouth" transform="translate(200,237)">
+              <g class="m" data-s="X"><path id="mXlow" fill="var(--lip)"/><path id="mXhi" fill="none" stroke="var(--lipHi)" stroke-width="1.3" stroke-linecap="round" opacity=".5"/><path id="mX1" stroke="var(--lipD)" stroke-width="3.2" stroke-linecap="round" fill="none"/><path id="mX2" fill="none" stroke="var(--skinLine)" stroke-width="1.3" stroke-linecap="round" opacity=".5"/><path id="mXd" fill="none" stroke="var(--skinLine)" stroke-width="1.3" stroke-linecap="round" opacity=".5"/></g>
+              <g class="m" data-s="A"><path d="M-21,0 Q0,9 21,-1" stroke="var(--lipD)" stroke-width="3.2" stroke-linecap="round" fill="none"/><path d="M-13,3.2 Q0,9.4 13,2.8" stroke="var(--lip)" stroke-width="4.6" stroke-linecap="round" fill="none"/></g>
+              <g class="m" data-s="B"><path d="M-21,0 Q-10,-5.6 0,-4.4 Q10,-5.6 21,0 Q10,10 0,10 Q-10,10 -21,0 Z" fill="var(--lip)" stroke="var(--lipD)" stroke-width="1.2" stroke-linejoin="round"/><path d="M-15,0 Q0,-3.6 15,0 L14.2,4 Q0,2.4 -14.2,4 Z" fill="#fff"/><path d="M-10,6.4 Q0,8.4 10,6.4" stroke="var(--lipHi)" stroke-width="1.1" stroke-linecap="round" fill="none" opacity=".4"/></g>
+              <g class="m" data-s="C"><path d="M-21,0 Q-11,-7 0,-5 Q11,-7 21,0 Q17,15 0,15.6 Q-17,15 -21,0 Z" fill="var(--lip)" stroke="var(--lipD)" stroke-width="1.2" stroke-linejoin="round"/><path d="M-16,0 Q-8,-5 0,-3.6 Q8,-5 16,0 Q13,11 0,12 Q-13,11 -16,0 Z" fill="#33121a"/><g clip-path="url(#mcH)" transform="translate(0,-0.5) scale(1,.96)"><ellipse cx="0" cy="9.6" rx="9.4" ry="4.6" fill="#d9646a"/><path d="M-14,-3 L14,-3 L13.4,1.4 Q0,-.6 -13.4,1.4 Z" fill="#fff"/></g></g>
+              <g class="m" data-s="D"><path d="M-25,-1 Q-12,-9 0,-6.4 Q12,-9 25,-1 Q23,20 0,22.4 Q-23,20 -25,-1 Z" fill="var(--lip)" stroke="var(--lipD)" stroke-width="1.3" stroke-linejoin="round"/><path d="M-21,-1 Q-10,-6 0,-4 Q10,-6 21,-1 Q19,16 0,18 Q-19,16 -21,-1 Z" fill="#33121a"/><g clip-path="url(#mcD)"><ellipse cx="0" cy="14.6" rx="11.6" ry="6" fill="#d9646a"/><path d="M-1,10 C-1,12 -1,15 -1,18" stroke="#b44a52" stroke-width=".9" stroke-linecap="round" fill="none" opacity=".6"/><path d="M-18,-4 L18,-4 L17,5.6 Q0,2.4 -17,5.6 Z" fill="#fff"/><path d="M0,0.6 L0,4.2" stroke="#d8cfcf" stroke-width=".8" opacity=".8"/></g></g>
+              <g class="m" data-s="E"><path d="M-16,2 Q-15,-7 0,-7 Q15,-7 16,2 Q15,13.4 0,14.4 Q-15,13.4 -16,2 Z" fill="var(--lip)" stroke="var(--lipD)" stroke-width="1.2" stroke-linejoin="round"/><path d="M-11,2 Q-10,-4 0,-4 Q10,-4 11,2 Q10,10 0,11 Q-10,10 -11,2 Z" fill="#33121a"/><g clip-path="url(#mcE)"><ellipse cx="0" cy="9" rx="6.6" ry="3.6" fill="#d9646a"/><path d="M-9,-5 L9,-5 L8.4,2.2 Q0,0.4 -8.4,2.2 Z" fill="#fff"/></g></g>
+              <g class="m" data-s="F"><circle cx="0" cy="3" r="10.5" fill="var(--lip)" stroke="var(--lipD)" stroke-width="1.2"/><circle cx="0" cy="3.4" r="5.6" fill="#33121a"/><ellipse cx="0" cy="5.6" rx="3.4" ry="1.9" fill="#c25b62"/><path d="M-6,-2.6 Q0,-5.4 6,-2.6" stroke="var(--lipHi)" stroke-width="1.1" stroke-linecap="round" fill="none" opacity=".4"/></g>
+              <g class="m" data-s="G"><path d="M-21,-1 Q-10,-6.4 0,-5.2 Q10,-6.4 21,-1 Q10,8.6 0,8.6 Q-10,8.6 -21,-1 Z" fill="var(--lip)" stroke="var(--lipD)" stroke-width="1.2" stroke-linejoin="round"/><path d="M-16,-2.6 Q0,-6.8 16,-2.6 L15,4 Q0,2.6 -15,4 Z" fill="#fff"/><path d="M-17,6 Q0,11 17,6" stroke="var(--lip)" stroke-width="4" stroke-linecap="round" fill="none"/></g>
+              <g class="m" data-s="H"><path d="M-21,0 Q-10,-6.6 0,-4.6 Q10,-6.6 21,0 Q17,15 0,15.6 Q-17,15 -21,0 Z" fill="var(--lip)" stroke="var(--lipD)" stroke-width="1.2" stroke-linejoin="round"/><path d="M-16,0 Q-8,-5 0,-3.4 Q8,-5 16,0 Q13,11 0,12 Q-13,11 -16,0 Z" fill="#33121a"/><g clip-path="url(#mcH)"><ellipse cx="0" cy="0.6" rx="8.8" ry="5.4" fill="#d9646a"/><path d="M-14,-3 L14,-3 L13,1 Q0,-1 -13,1 Z" fill="#fff"/></g></g>
+            </g>
+          </g>
+        </g>
+        <!-- hair: the short swept cap with two short side strands (long hairStyle = this silhouette; the strand tips sway a little).
+             Inside the silhouette: a three-tone shade, a sheen, strands, a defined part and hairline, and a cool rim light on the right. -->
+        <g id="hairG">
+          <g id="hairLongG" style="display:none">
+            <path id="hlBase" d="" fill="var(--hair)"/>
+            <g clip-path="url(#hlClip)">
+              <path d="M112,200 C100,112 140,62 204,54 C168,72 142,110 132,162 Z" fill="var(--hairHi)" opacity=".14"/>
+              <path d="M296,236 C300,150 262,76 204,54 C262,90 282,160 276,236 Z" fill="var(--hairLine)" opacity=".2"/>
+              <!-- shadow where the hair meets the face (the inner edge of the cap) and under the strands -->
+              <path d="M296,240 C296,176 270,112 200,108 C130,112 102,176 102,240" fill="none" stroke="var(--hairLine)" stroke-width="9" opacity=".34"/>
+              <path d="M206,52 C256,54 304,82 292,222 L260,222 C272,150 250,92 206,52 Z" fill="var(--hairLine)" opacity=".28"/>
+              <!-- layered strands that follow the sweep from the part -->
+              <path d="M184,106 C160,98 138,114 128,150 C124,164 122,180 122,198" fill="none" stroke="var(--hairLine)" stroke-width="1.3" stroke-linecap="round" opacity=".7"/>
+              <path d="M190,106 C170,88 142,92 124,124 C118,138 114,156 114,176" fill="none" stroke="var(--hairLine)" stroke-width="1.2" stroke-linecap="round" opacity=".6"/>
+              <path d="M196,106 C214,100 240,108 258,134 C268,150 272,170 272,196" fill="none" stroke="var(--hairLine)" stroke-width="1.3" stroke-linecap="round" opacity=".7"/>
+              <path d="M200,98 C226,88 256,100 270,126 C278,144 282,166 282,190" fill="none" stroke="var(--hairLine)" stroke-width="1.2" stroke-linecap="round" opacity=".6"/>
+              <path d="M178,100 C150,84 124,102 112,140" fill="none" stroke="var(--hairHi)" stroke-width="1.6" stroke-linecap="round" opacity=".34"/>
+              <path d="M200,92 C232,86 262,102 276,134" fill="none" stroke="var(--hairHi)" stroke-width="1.5" stroke-linecap="round" opacity=".26"/>
+              <!-- the sheen: a tapered crescent across the dome, lit from the upper left -->
+              <path d="M142,102 C160,78 204,66 244,80 C208,76 172,86 142,102 Z" fill="var(--hairHi)" opacity=".72"/>
+              <path d="M130,126 C136,106 150,92 170,84 C152,96 140,110 130,126 Z" fill="var(--hairHi)" opacity=".4"/>
+              <path d="M158,92 C178,82 206,78 230,84" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" opacity=".18"/>
+              <!-- the defined part -->
+              <path d="M186,108 C185.6,104 184.4,100.6 182.8,97.6" fill="none" stroke="var(--skin2)" stroke-width="1.4" stroke-linecap="round" opacity=".42"/>
+              <!-- cool rim light on the right edge of the dome and the strand -->
+              <path d="M200,54 C248,52 300,78 288,196 L296,240" fill="none" stroke="var(--hairRim)" stroke-opacity=".62" stroke-width="6"/>
+              <path d="M116,210 C100,100 150,56 200,54" fill="none" stroke="var(--hairRim)" stroke-opacity=".3" stroke-width="4"/>
+            </g>
+            <path id="hlOut" d="" fill="none" stroke="var(--hairRim)" stroke-opacity=".7" stroke-width="1.5" stroke-linejoin="round"/>
+          </g>
+        <!-- leo's hair: a short men's cut, a side part with a soft quiff swept to the right, short back and sides, sideburns to the middle of the ear, ears clear.
+             The mass and its clip are static; only the quiff's front lock (#hmLock) sways a little. Three tones (base, shade, sheen), strands that follow the
+             sweep, and a cool rim light on the right and over the crown. -->
+        <g id="hairMenG" style="display:none">
+          <path d="M129,166 L129,154 L130.6,144 C134.6,134 142,125 150,118 C157,111 167,106 177,104 C187,102.6 200,102.4 212,102.8 C226,103.4 238,106 247,111.6 C255,118 261,125 266,133 C270,139 271.6,146 271.6,154 L271.6,166" fill="none" stroke="var(--skinLine)" stroke-width="7" stroke-linecap="round" opacity=".16" transform="translate(0,3.2)"/>
+          <path d="M184,108 C202,112 224,116 246,118.6 C250,119 252,117 252,115.6 C244,122 230,122 214,119 C200,116.6 190,113 184,108 Z" fill="var(--skinLine)" opacity=".2"/>
+          <path id="hmBase" d="M122,193 L121.4,176 C119,172 116.6,168 116.6,162 C116,152 118,144 121,138 C124,126 128,118 134,111 C142,100 152,90 164,82 C178,72 194,65 212,63 C236,61 258,72 270,96 C276,108 280,124 281.4,140 C282.6,152 283.4,158 283.4,162 C283.4,168 281,172 278.6,176 L278,193 L271.6,189.6 L271.6,154 C271.6,146 270,139 266,133 C261,125 255,118 247,111.6 C238,106 226,103.4 212,102.8 C200,102.4 187,102.6 177,104 C167,106 157,111 150,118 C142,125 134.6,134 130.6,144 L129,154 L128.6,189.6 Z" fill="var(--hair)"/>
+          <g clip-path="url(#hmClip)">
+            <path d="M116,176 C102,124 134,70 212,60 C164,80 138,118 132,176 Z" fill="var(--hairHi)" opacity=".12"/>
+            <path d="M306,214 C310,130 266,62 212,58 C262,84 282,142 272,214 Z" fill="var(--hairLine)" opacity=".3"/>
+            <path d="M129,166 L129,154 L130.6,144 C134.6,134 142,125 150,118 C157,111 167,106 177,104 C187,102.6 200,102.4 212,102.8 C226,103.4 238,106 247,111.6 C255,118 261,125 266,133 C270,139 271.6,146 271.6,154 L271.6,166" fill="none" stroke="var(--hairLine)" stroke-width="8" stroke-linecap="round" opacity=".3"/>
+            <!-- short back and sides: the hair thins toward the ears (a soft skin-toned fade over the lower temples) -->
+            <path d="M114,172 C113,152 118,138 126,128 C124,142 126,156 129,170 L128.6,192 L121,194 Z" fill="var(--skin2)" opacity=".14"/>
+            <path d="M286,172 C287,152 282,138 274,128 C276,142 274,156 271.6,170 L271.6,192 L279,194 Z" fill="var(--skin2)" opacity=".14"/>
+            <!-- strands that follow the sweep from the part -->
+            <path d="M180,98 C188,82 210,70 238,72 C258,74 270,90 276,112" fill="none" stroke="var(--hairLine)" stroke-width="1.3" stroke-linecap="round" opacity=".7"/>
+            <path d="M187,102 C197,88 220,80 244,86 C260,92 268,104 271,124" fill="none" stroke="var(--hairLine)" stroke-width="1.2" stroke-linecap="round" opacity=".6"/>
+            <path d="M193,104 C216,96 242,100 262,116" fill="none" stroke="var(--hairLine)" stroke-width="1.2" stroke-linecap="round" opacity=".5"/>
+            <path d="M174,98 C168,86 170,74 184,67" fill="none" stroke="var(--hairLine)" stroke-width="1.2" stroke-linecap="round" opacity=".6"/>
+            <path d="M170,106 C154,100 140,104 132,122" fill="none" stroke="var(--hairLine)" stroke-width="1.3" stroke-linecap="round" opacity=".7"/>
+            <path d="M166,99 C150,90 136,94 126,114" fill="none" stroke="var(--hairLine)" stroke-width="1.2" stroke-linecap="round" opacity=".55"/>
+            <path d="M150,88 C172,72 202,66 234,70" fill="none" stroke="var(--hairHi)" stroke-width="1.6" stroke-linecap="round" opacity=".3"/>
+            <!-- the sheen: layered crescents across the quiff and the crown, lit from the upper left -->
+            <path d="M132,112 C140,86 178,66 226,66 C234,68 242,70 248,76 C200,70 160,86 132,112 Z" fill="var(--hairHi)" opacity=".24"/>
+            <path d="M142,102 C154,82 186,70 228,72 C190,76 160,88 142,102 Z" fill="var(--hairHi)" opacity=".5"/>
+            <path d="M126,136 C128,116 138,100 154,90 C144,104 134,118 126,136 Z" fill="var(--hairHi)" opacity=".38"/>
+            <path d="M160,92 C182,82 208,78 234,82" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" opacity=".2"/>
+            <!-- the defined part -->
+            <path d="M177,104 C175.4,97 172,90 167,83" fill="none" stroke="var(--skin2)" stroke-width="1.8" stroke-linecap="round" opacity=".55"/>
+            <!-- cool rim light: the right side of the crown and the sideburn, a fainter one over the left crown -->
+            <path d="M212,63 C236,61 258,72 270,96 C276,108 280,124 281.4,140 C282.6,152 283.4,158 283.4,162 C283.4,167 281.6,171 279.4,174.6" fill="none" stroke="var(--hairRim)" stroke-opacity=".26" stroke-width="8" stroke-linecap="round"/>
+            <path d="M226,63.4 C244,64 260,76 270,96 C276,108 280,124 281.4,140 C282.6,152 283.4,158 283.4,162 C283.4,167 281.6,171 279.4,174.6" fill="none" stroke="var(--hairRim)" stroke-opacity=".72" stroke-width="4" stroke-linecap="round"/>
+            <path d="M200,63.6 C216,62.6 226,63 236,64.6" fill="none" stroke="var(--hairRim)" stroke-opacity=".42" stroke-width="4" stroke-linecap="round"/>
+            <path d="M116.6,162 C116,152 118,144 121,138 C124,126 128,118 134,111 C142,100 152,90 164,82 C178,72 194,65 212,63" fill="none" stroke="var(--hairRim)" stroke-opacity=".3" stroke-width="5" stroke-linecap="round"/>
+          </g>
+          <path id="hmLock" d="" fill="var(--hair)"/>
+          <path id="hmLockSh" d="" fill="none" stroke="var(--hairLine)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity=".7"/>
+          <path id="hmLockHi" d="" fill="none" stroke="var(--hairHi)" stroke-width="1.8" stroke-linecap="round" opacity=".5"/>
+          <path d="M212,63 C236,61 258,72 270,96 C276,108 280,124 281.4,140 C282.6,152 283.4,158 283.4,162 C283.4,167 281.6,171 279.4,174.6 M116.6,162 C116,152 118,144 121,138 C124,126 128,118 134,111 C142,100 152,90 164,82 C178,72 194,65 212,63" fill="none" stroke="var(--hairRim)" stroke-opacity=".55" stroke-width="1.3" stroke-linejoin="round"/>
+        </g>
+          <path id="hairShort" d="M120,176 C110,98 150,70 200,70 C252,70 290,98 280,176 C276,140 262,118 238,114 C230,124 214,128 200,128 C176,128 150,122 138,130 C126,142 122,160 120,176 Z" fill="var(--hair)" stroke="var(--hairLine)" stroke-width="1.4" stroke-linejoin="round"/>
+          <path id="fringe" d="M136,130 C150,112 176,104 206,108 C226,110 240,118 246,128 C236,124 222,122 206,124 C184,126 160,134 136,130 Z" fill="var(--hair)"/>
+          <path id="hairCurly" style="display:none" d="M110,196 C92,96 136,46 200,48 C264,46 308,96 290,196 C290,164 282,134 266,122 C258,138 244,142 234,124 C224,142 208,146 198,128 C188,146 170,146 160,128 C150,142 136,140 132,122 C118,132 110,160 110,196 Z" fill="var(--hair)" stroke="var(--hairLine)" stroke-width="1.4" stroke-linejoin="round"/>
+          <g id="hairBun" style="display:none"><circle cx="236" cy="74" r="21" fill="var(--hair)" stroke="var(--hairLine)" stroke-width="1.4"/><circle cx="236" cy="74" r="12" fill="#fff" opacity=".12"/></g>
+          <path id="hairPart" style="display:none" d="M178,96 C190,110 198,120 204,128" fill="none" stroke="var(--skin)" stroke-width="3" stroke-linecap="round" opacity=".9"/>
+          <g id="hairLegacySheen">
+            <path d="M156,92 C176,80 204,76 230,84" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" opacity=".24"/>
+            <path d="M246,84 C266,96 278,120 278,150" fill="none" stroke="var(--hairRim)" stroke-width="4" stroke-linecap="round" opacity=".85"/>
+          </g>
+        </g>
+      </g>
+      <!-- the front of the ribbed crew collar: over the foot of the neck, so the neck goes into the shirt (follows the torso) -->
+      <g id="collarF" clip-path="url(#torsoClip)">
+        <path d="M163,306 C168,318 184,326.5 200,326.5 C216,326.5 232,318 237,306" fill="none" stroke="var(--shirtLine)" stroke-width="10.6"/>
+        <path d="M163,306 C168,318 184,326.5 200,326.5 C216,326.5 232,318 237,306" fill="none" stroke="var(--shirt2)" stroke-width="8.4"/>
+        <path d="M163,306 C168,318 184,326.5 200,326.5 C216,326.5 232,318 237,306" fill="none" stroke="var(--shirtLine)" stroke-width="6.8" stroke-dasharray="0.9 2.5" opacity=".42"/>
+        <path d="M164.6,304.6 C169.6,316 185,323.4 200,323.4 C215,323.4 230.4,316 235.4,304.6" fill="none" stroke="var(--shirtHi)" stroke-width="1.5" stroke-linecap="round" opacity=".6"/>
+        <path d="M164,309 C169,321 185,329.4 200,329.4 C215,329.4 231,321 236,309" fill="none" stroke="var(--shirtHi)" stroke-width=".9" stroke-linecap="round" opacity=".3"/>
+      </g>
+      <!-- arms, in front of the torso. Every shape overlaps its neighbours (no seams for the background to show through).
+           #shL/#shR (r=0) and #elL/#elR carry the IK joint positions in cx/cy; #handL/#handR carry translate(wrist) rotate(deg). -->
+      <g id="armShadows" clip-path="url(#torsoClip)"><path id="shaL" fill="var(--shirtLine)" opacity=".32"/><path id="shaR" fill="var(--shirtLine)" opacity=".32"/></g>
+      <g id="armR"></g>
+      <g id="armL"></g>
+    </g>
+  </g>
+</svg>
+<script>
+// ---------- styles ------------------------------------------------------------------------------
+const STYLES = {
+  // energy scales idle motion, talking bob and gesture snap (1 = baseline); smile is the resting smile
+  sam:  {skin:"#f1c7a3", skin2:"#d9a67f", hair:"#3b2a20", shirt:"#15803d", shirt2:"#0f5f2e", lip:"#b2453f", iris:"#3d6b8f", hairStyle:"short", glasses:false, headphones:true, energy:1.0},
+  ana:  {skin:"#c68642", skin2:"#a86b32", hair:"#1f1a17", shirt:"#1d4ed8", shirt2:"#1538a6", lip:"#8f3a35", iris:"#2f2320", hairStyle:"long", earrings:true, energy:0.8},
+  lee:  {skin:"#f7d6b8", skin2:"#e0b48f", hair:"#6b4a2b", shirt:"#7c3aed", shirt2:"#5b21b6", lip:"#b2453f", iris:"#355f8a", hairStyle:"part", glasses:true, headphones:true, energy:0.9},
+  maya: {skin:"#8d5a3b", skin2:"#6f4328", hair:"#241a14", shirt:"#ea580c", shirt2:"#c2410c", lip:"#8f3a35", iris:"#2f2320", hairStyle:"curly", earrings:true, energy:1.25},
+  raj:  {skin:"#b57a4e", skin2:"#94603a", hair:"#15110f", shirt:"#0f766e", shirt2:"#115e59", lip:"#8f3a35", iris:"#2a1f1b", hairStyle:"part", beard:true, energy:0.9},
+  kit:  {skin:"#fbe3cf", skin2:"#e8bfa0", hair:"#c2410c", shirt:"#ca8a04", shirt2:"#a16207", lip:"#b2453f", iris:"#3d7a5a", hairStyle:"bun", freckles:true, headphones:true, energy:1.3},
+  jo:   {skin:"#e8c3a0", skin2:"#cda07c", hair:"#9ca3af", shirt:"#1e3a8a", shirt2:"#172e6e", lip:"#a04038", iris:"#4a3b2f", hairStyle:"short", glasses:true, energy:0.7},
+  // leo: the male host. The same character family as ana (slim build, blue tee, warm skin, big round eyes, small smile, the same rig and
+  // energy), with the gendered cues changed: a short men's cut with a side part, squarer jaw, thicker neck, straighter brows, no lashes/earrings
+  leo:  {skin:"#c68642", skin2:"#a86b32", hair:"#1f1a17", shirt:"#1d4ed8", shirt2:"#1538a6", lip:"#8f3a35", iris:"#2f2320", hairStyle:"men", male:true, energy:0.8},
+  "leo-light":   {skin:"#f1c7a3", skin2:"#d9a67f", hair:"#1f1a17", shirt:"#1d4ed8", shirt2:"#1538a6", lip:"#a8453f", iris:"#2f2320", hairStyle:"men", male:true, energy:0.8},
+  "leo-stubble": {skin:"#c68642", skin2:"#a86b32", hair:"#1f1a17", shirt:"#1d4ed8", shirt2:"#1538a6", lip:"#8f3a35", iris:"#2f2320", hairStyle:"men", male:true, stubble:true, energy:0.8},
+};
+let STYLE = STYLES.leo, STICKER = false;
+const $ = (id) => document.getElementById(id);
+const hex2 = (h) => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+const mixC = (a, b, u) => { const A = hex2(a), B = hex2(b); return "#" + A.map((v, i) => Math.round(Math.min(255, Math.max(0, v + (B[i] - v) * u))).toString(16).padStart(2, "0")).join(""); };
+const RIMC = "#8fc4ff";   // the cool rim light, from behind on the right: it separates the host from a dark navy page
+window.setStyle = (name, overrides) => {
+  window.__style = name; window.__ovr = overrides;
+  const s = Object.assign({}, STYLES[name] || STYLES.leo, overrides || {});
+  if (!s.shirt2) s.shirt2 = s.shirt;
+  STYLE = s;
+  { const bd = document.getElementById("badge"); if (bd) bd.style.display = s.badge ? "" : "none";   // optional chest badge: setStyle(name, {badge: "<image url or data URI>"})
+    const bi = document.getElementById("badgeImg"); if (bi) bi.setAttribute("href", typeof s.badge === "string" ? s.badge : ""); }
+  // the derived palette: outlines are a darker tone of each fill (never black), highlights a lighter one, the rim a cool blue
+  const d = {
+    skinHi: mixC(s.skin, "#ffe6c4", .38), skinRim: mixC(s.skin, "#a9c8ff", .38), skinLine: mixC(s.skin2, "#2b1308", .5),
+    hairHi: mixC(s.hair, "#cbb5a4", .4), hairLine: mixC(s.hair, "#000000", .55), hairRim: mixC(s.hair, RIMC, .55),
+    shirtHi: mixC(s.shirt, "#a8c4ff", .3), shirtLine: mixC(s.shirt2, "#050b26", .55), shirtRim: mixC(s.shirt, RIMC, .45),
+    lipD: mixC(s.lip, "#2b0d10", .38), lipL: mixC(s.lip, "#d9786c", .22), lipHi: mixC(s.lip, "#ffd2c8", .55), blush: s.blush || "#e5806a",
+    irisD: mixC(s.iris, "#000000", .45), irisM: mixC(s.iris, "#c08c5c", .4), pupil: mixC(s.iris, "#000000", .62),
+    brow: mixC(s.hair, "#000000", .1), rim: RIMC, stk: s.stk || "#a9bfe6",
+  };
+  const r = document.documentElement.style;
+  for (const k of ["skin", "skin2", "hair", "shirt", "shirt2", "lip", "iris"]) r.setProperty("--" + k, s[k]);
+  for (const k in d) r.setProperty("--" + k, d[k]);
+  const hs = s.hairStyle || "short";
+  const show = (id, on) => { const e = $(id); if (e) e.style.display = on ? "" : "none"; };
+  show("hairShort", hs === "short" || hs === "part" || hs === "bun");
+  show("fringe", hs === "short" || hs === "part" || hs === "bun");
+  show("hairLongG", hs === "long"); show("stkHairLong", hs === "long"); show("hairMenG", hs === "men"); show("stkHairMen", hs === "men");
+  show("hairCurly", hs === "curly"); show("hairBun", hs === "bun"); show("hairPart", hs === "part"); show("hairLegacySheen", hs !== "long" && hs !== "men");
+  for (const id of ["hairShort", "fringe", "hairCurly", "hairBun"]) { const e = $("stk_" + id); if (e) e.style.display = $(id).style.display; }
+  for (const k of ["glasses", "beard", "freckles", "earrings"]) show(k, s[k]);
+  show("phones", s.headphones);
+  show("noseF", !s.male); show("noseM", !!s.male); show("stubble", !!s.stubble); show("stbLip", !!s.stubble);
+  const ch = (s.male ? 0.3 : 1).toString(); $("cheekL").setAttribute("opacity", ch); $("cheekR").setAttribute("opacity", ch);   // blush: leo's is very light
+  if (window.__ready) applyShapes(s);
+  STICKER = !!s.sticker && !s.noSticker; show("stk", STICKER);   // the light "sticker" edge is off by default (it made the thin strands read as pale at video size); setStyle(name, {sticker:true}) turns it on
+};
+// ---------- per-style shapes: face contour, neck, shoulders, brows, hands, stubble ------------------------------
+// ana's round face (the original contour) and leo's: the same round-friendly head with a slightly squarer jaw and chin (a few units).
+const FACE_TOP = "M200,88 C256,88 280,132 280,184 ", FACE_END = "C120,132 144,88 200,88 Z";
+const FACES = {
+  f: {lowR: "C280,236 250,274 200,274 ", lowL: "C150,274 120,236 120,184 ", ret1: "C230,270 250,246 255,204 C257,160 246,116 222,93 C214,90 208,89 200,88 Z", ret2: "C238,266 262,232 264,186 C266,146 256,112 232,96 C222,92 212,89 200,88 Z",
+      sh3: "M140,242 C158,266 182,274 200,274 C222,274 246,264 262,240 C244,260 222,264 200,264 C178,264 158,258 140,242 Z", chinY: 262,
+      rim: [[[[200, 88], [256, 88], [280, 132], [280, 184]], 0.52, 1], [[[280, 184], [280, 236], [250, 274], [200, 274]], 0, 0.8]]},
+  m: {lowR: "C280,230 268,253 246,264 C234,270 218,275 200,275 ", lowL: "C182,275 166,270 154,264 C132,253 120,230 120,184 ", ret1: "C230,271 250,247 255,204 C257,160 246,116 222,93 C214,90 208,89 200,88 Z", ret2: "C238,267 262,233 264,186 C266,146 256,112 232,96 C222,92 212,89 200,88 Z",
+      sh3: "M138,244 C146,258 158,267 170,271 C180,274 190,275 200,275 C212,275 224,273 234,270 C248,266 258,258 264,248 C246,262 224,265 200,265 C178,265 156,262 138,244 Z", chinY: 264,
+      rim: [[[[200, 88], [256, 88], [280, 132], [280, 184]], 0.52, 1], [[[280, 184], [280, 230], [268, 253], [246, 264]], 0, 1], [[[246, 264], [234, 270], [218, 275], [200, 275]], 0, 0.42]]},
+};
+function faceRimD(segs) {   // the face contour (right side, down to the chin) offset inward, so the cool rim light never leaves the face
+  const cub = (P, t) => { const u = 1 - t; return [u * u * u * P[0][0] + 3 * u * u * t * P[1][0] + 3 * u * t * t * P[2][0] + t * t * t * P[3][0], u * u * u * P[0][1] + 3 * u * u * t * P[1][1] + 3 * u * t * t * P[2][1] + t * t * t * P[3][1]]; };
+  const pts = [];
+  for (const [P, a, b] of segs) for (let i = 0; i <= 14; i++) {
+    const t = a + (b - a) * i / 14, c = cub(P, t), c2 = cub(P, Math.min(1, t + 0.01)), c1 = cub(P, Math.max(0, t - 0.01)), dx = c2[0] - c1[0], dy = c2[1] - c1[1], d = Math.hypot(dx, dy) || 1;
+    let nx = dy / d, ny = -dx / d; if (nx * (200 - c[0]) + ny * (181 - c[1]) < 0) { nx = -nx; ny = -ny; }
+    pts.push([c[0] + nx * 2.4, c[1] + ny * 2.4]);
+  }
+  return "M" + pts.map(v => v[0].toFixed(1) + "," + v[1].toFixed(1)).join(" L");
+}
+// the neck: a little narrower under the jaw, widening gently into the collar (a soft taper, not a boxy column); its foot ends a few units above the collar's centre line, so it never pokes out below the band when the head dips
+function neckD(ht, hb) {
+  const L1 = 200 - ht, R1 = 200 + ht, Lb = 200 - hb, Rb = 200 + hb;
+  return `M${L1},240 C${L1},262 ${Lb},278 ${Lb},300 L${Lb},313.4 C${Lb + 7},318.4 190,321.2 200,321.2 C210,321.2 ${Rb - 7},318.4 ${Rb},313.4 L${Rb},300 C${Rb},278 ${R1},262 ${R1},240 Z`;
+}
+// scale the x of an absolute M/L/C path about x=200 (the clip / sticker copies of the broader shoulders)
+const scalePathX = (d, k) => d.replace(/(-?[\d.]+),(-?[\d.]+)/g, (m, x, y) => `${(200 + (+x - 200) * k).toFixed(1)},${y}`);
+const TORSO_D = "M92,446 L92,420 C92,362 118,320 152,306 L248,306 C282,320 308,362 308,420 L308,446 Z";
+const SHOULDER_K = 1.02;                                     // leo's shoulders: +2.2 units each side
+function buildBrows(male) {
+  // ana: arched, tapering; leo: straighter and a bit thicker (the mood/brow motion is unchanged: it only moves the group)
+  const L = male ? [[150, 143.5], [171, 137.2], [192, 141]] : [[150, 146], [170, 134], [192, 142]], R = male ? [[252, 139], [231, 132.6], [208, 138.6]] : [[252, 140], [230, 129], [208, 140]];
+  const o = male ? {h0: 1.1, h1: 2.9} : {h0: 0.85, h1: 2.4};
+  $("browLp").setAttribute("d", browShape(L, o)); $("browRp").setAttribute("d", browShape(R, o));
+  $("browLh").setAttribute("d", browHi(L)); $("browRh").setAttribute("d", browHi(R));
+}
+function applyShapes(s) {
+  const male = !!s.male, F = male ? FACES.m : FACES.f;
+  const face = FACE_TOP + F.lowR + F.lowL + FACE_END;
+  for (const id of ["face", "faceOut", "stkFace", "faceClipP"]) $(id).setAttribute("d", face);
+  $("fsh1").setAttribute("d", FACE_TOP + F.lowR + F.ret1); $("fsh2").setAttribute("d", FACE_TOP + F.lowR + F.ret2); $("fsh3").setAttribute("d", F.sh3);
+  $("fsh4").setAttribute("cy", F.chinY); $("faceRim").setAttribute("d", faceRimD(F.rim));
+  const ht = male ? 23 : 21, hb = male ? 28 : 25.5, nd = neckD(ht, hb);
+  for (const id of ["neckBase", "neckSide", "neckChin", "neckCs", "stkNeck"]) $(id).setAttribute("d", nd);
+  $("neckRim").setAttribute("d", `M${200 + hb - 1.6},258 L${200 + hb - 1.6},306`);
+  const td = male ? scalePathX(TORSO_D, SHOULDER_K) : TORSO_D;
+  if (male) $("torsoBody").setAttribute("transform", `translate(200,0) scale(${SHOULDER_K},1) translate(-200,0)`); else $("torsoBody").removeAttribute("transform");
+  $("tcP").setAttribute("d", td); $("stkTorso").setAttribute("d", td);
+  buildBrows(male);
+  FS = male ? FING_M : FING; TS = male ? THUMB_M : THUMB;
+  for (const sd of ["L", "R"]) { const H = HANDS[sd]; H.pol.setAttribute("d", male ? PALM_OPEN_M : PALM_OPEN); H.palm.setAttribute("d", male ? PALM_OPEN_M + " Z" : PALM); H.spalm.setAttribute("d", male ? PALM_OPEN_M + " Z" : PALM); }
+  if (s.stubble) {
+    $("stbJaw").setAttribute("d", "M110,194 C124,224 148,242 172,251 C186,257 214,257 228,251 C252,242 276,224 290,194 L290,300 L110,300 Z");
+    $("stbJaw2").setAttribute("d", "M110,184 C124,212 148,230 172,241 C186,247 214,247 228,241 C252,230 276,212 290,184 L290,300 L110,300 Z");
+    $("stbLip").setAttribute("d", "M180,231 Q200,245.8 221,229.4 Q200,228.6 180,231 Z");
+  }
+}
+
+// ---------- timeline ---------------------------------------------------------------------------
+window.TIMELINE = {mouth: [], blinks: [], beats: [], gestures: [], idle: [], glances: [], talking: [], opacity: [], fadeIn: 0.5, fadeOut: 0.5, duration: 10};
+const f2 = (v) => (+v.toFixed(2)).toString();
+const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
+const lerp = (a, b, u) => a + (b - a) * u;
+const smooth = (x) => { x = clamp(x, 0, 1); return x * x * (3 - 2 * x); };
+const easeInOutCubic = (x) => { x = clamp(x, 0, 1); return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2; };
+const easeOutBack = (x, s = 1.35) => { x = clamp(x, 0, 1); s = s * (0.6 + 0.4 * (STYLE.energy || 1)); const c = s + 1; return 1 + c * Math.pow(x - 1, 3) + s * Math.pow(x - 1, 2); };
+const springOut = (x, s) => { x = clamp(x, 0, 1); return 1 + (s + 1) * Math.pow(x - 1, 3) + s * Math.pow(x - 1, 2); };   // style-independent overshoot
+const noise = (t, a = 1, b = 1.7, c = 2.9) => (Math.sin(t * a) + Math.sin(t * b + 1.3) + Math.sin(t * c + 2.1)) / 3;
+const spanW = (s, t, ramp) => Math.min(smooth((t - s.start) / ramp), smooth((s.end - t) / ramp));
+const hash01 = (i) => { const x = Math.sin(i * 12.9898 + 78.233) * 43758.5453; return x - Math.floor(x); };
+window.setStyle("leo");
+
+// Derived data is cached per source array (identity + length), so each frame stays a cheap pure function of t.
+const MEMO = new Map();
+function memo(key, dep, fn) {
+  const m = MEMO.get(key), n = dep && dep.length;
+  if (m && m.dep === dep && m.n === n) return m.val;
+  const val = fn(); MEMO.set(key, {dep, n, val}); return val;
+}
+
+// A gesture's weight: anticipation (pull back), fast ease-out with overshoot, hold, eased release.
+// The calmer new gestures reuse the same envelope with their own timing (k: {ANT, IN, OUT, S}).
+const ENV_K = {count: {ANT: 0.12, IN: 0.8, OUT: 0.6, S: 1.0}, shrug: {ANT: 0.12, IN: 0.6, OUT: 0.65, S: 1.0}, hands: {ANT: 0.1, IN: 0.85, OUT: 0.75, S: 0.6}, beat: {ANT: 0.12, IN: 0.36, OUT: 0.5, S: 1.4}};
+function gestureWeight(g, t, k) {
+  const ANT = k ? k.ANT : 0.14, IN = k ? k.IN : 0.42, OUT = k ? k.OUT : 0.5, S = k ? k.S : 1.6;
+  if (t < g.start - ANT || t > g.end + OUT) return 0;
+  if (k) {   // calm variant: no jump at the start (the pull-back returns to 0, the move eases in), same overshoot and release
+    if (t < g.start) return -0.1 * Math.sin(Math.PI * (t - (g.start - ANT)) / ANT);
+    if (t < g.start + IN) return springOut(smooth((t - g.start) / IN), S);
+  }
+  if (t < g.start) return -0.12 * smooth((t - (g.start - ANT)) / ANT);
+  if (t < g.start + IN) return easeOutBack((t - g.start) / IN, S);
+  if (t <= g.end) return 1;
+  return 1 - easeInOutCubic((t - g.end) / OUT);
+}
+// Arm solver. Two-bone IK gives two elbow solutions (mirrored across the shoulder-wrist line); the natural one is lower and away
+// from the body (a raised arm's elbow hangs; a hand on the hip pushes the elbow out). Each pose (an idle pose, a point, a count...)
+// is solved once, exactly as before, into JOINT ANGLES {a: upper arm, b: forearm}, and the arm moves between poses by blending
+// the angles with the gesture weights (the upper arm the short way round, the forearm on the outer side, see jLerp) and running forward kinematics. So the bones keep their length, the
+// hand swings along a natural arc, and the elbow can never flip (the old hard switch popped it ~100 units in one frame whenever a
+// hand crossed the tie line). Pure function of t: nothing is remembered between frames.
+const ARM_L1 = 66, ARM_L2 = 62;
+function ikSolve(S, T, l1, l2) {
+  let dx = T[0] - S[0], dy = T[1] - S[1], d = Math.hypot(dx, dy);
+  const reach = l1 + l2 - 1;
+  if (d > reach) { dx *= reach / d; dy *= reach / d; d = reach; }
+  if (d < 10) { dx = 0; dy = 10; d = 10; }
+  const a = Math.acos(clamp((l1 * l1 + d * d - l2 * l2) / (2 * l1 * d), -1, 1));
+  const base = Math.atan2(dy, dx);
+  const sol = (bend) => { const ang = base + bend * a; return [S[0] + l1 * Math.cos(ang), S[1] + l1 * Math.sin(ang)]; };
+  const score = (E) => E[1] * 1.0 + Math.abs(E[0] - 200) * 0.7;                 // lower + outward
+  const E1 = sol(1), E2 = sol(-1);
+  return {E1, E2, H: [S[0] + dx, S[1] + dy], diff: score(E1) - score(E2)};
+}
+// A near-tie between the two elbow solutions keeps the side (bend = +1 first solution, -1 the other) of the pose the arm comes from,
+// as the old hysteresis did.
+function jointsFor(S, T, prefBend) {
+  const r = ikSolve(S, T, ARM_L1, ARM_L2), bend = Math.abs(r.diff) >= 6 ? (r.diff > 0 ? 1 : -1) : prefBend, E = bend > 0 ? r.E1 : r.E2;
+  return {a: Math.atan2(E[1] - S[1], E[0] - S[0]), b: Math.atan2(r.H[1] - E[1], r.H[0] - E[0]), bend};
+}
+function fk(S, J) {
+  const E = [S[0] + ARM_L1 * Math.cos(J.a), S[1] + ARM_L1 * Math.sin(J.a)];
+  return {E, H: [E[0] + ARM_L2 * Math.cos(J.b), E[1] + ARM_L2 * Math.sin(J.b)], dir: J.b};
+}
+const wrapPi = (x) => { while (x > Math.PI) x -= 2 * Math.PI; while (x < -Math.PI) x += 2 * Math.PI; return x; };
+// The forearm does NOT take the shortest way round: it sweeps on the outer/lower side, never up and across the face (a forearm
+// swinging down from a raised point would otherwise cut through the head). Angles are unwrapped into a window that starts just
+// before "straight up", mirrored for the left arm, and interpolated linearly inside it.
+const B_LO = -125 * Math.PI / 180;
+const unwrapB = (b, side, lo) => { let x = side === "L" ? Math.PI - b : b; while (x < lo) x += 2 * Math.PI; while (x >= lo + 2 * Math.PI) x -= 2 * Math.PI; return x; };
+const jLerp = (J, K, u, side, lo = B_LO) => {
+  const x = lerp(unwrapB(J.b, side, lo), unwrapB(K.b, side, lo), u);
+  return {a: J.a + wrapPi(K.a - J.a) * u, b: side === "L" ? Math.PI - x : x, bend: K.bend};
+};
+// a small extra displacement of the hand (beat flick, entrance drag): re-solve with the elbow nearest to where it is
+function fkOffset(S, J, off) {
+  const f = fk(S, J);
+  if (Math.abs(off[0]) + Math.abs(off[1]) < 0.01) return f;
+  const r = ikSolve(S, [f.H[0] + off[0], f.H[1] + off[1]], ARM_L1, ARM_L2);
+  const E = Math.hypot(r.E1[0] - f.E[0], r.E1[1] - f.E[1]) <= Math.hypot(r.E2[0] - f.E[0], r.E2[1] - f.E[1]) ? r.E1 : r.E2;
+  return {E, H: r.H, dir: Math.atan2(r.H[1] - E[1], r.H[0] - E[0])};
+}
+// A tapered limb segment with round ends: from P (width w1) to Q (width w2).
+function limb(P, Q, w1, w2) {
+  const dx = Q[0] - P[0], dy = Q[1] - P[1], d = Math.hypot(dx, dy) || 1, nx = -dy / d, ny = dx / d;
+  const r1 = w1 / 2, r2 = w2 / 2;
+  const p1 = [P[0] + nx * r1, P[1] + ny * r1], p2 = [P[0] - nx * r1, P[1] - ny * r1];
+  const q1 = [Q[0] + nx * r2, Q[1] + ny * r2], q2 = [Q[0] - nx * r2, Q[1] - ny * r2];
+  const f = (v) => `${v[0].toFixed(1)},${v[1].toFixed(1)}`;
+  return `M${f(p1)} L${f(q1)} A${r2.toFixed(1)},${r2.toFixed(1)} 0 0 0 ${f(q2)} L${f(p2)} A${r1.toFixed(1)},${r1.toFixed(1)} 0 0 0 ${f(p1)} Z`;
+}
+
+// ---------- parametric hands ---------------------------------------------------------------------
+// Local frame: wrist/palm centre at the origin, +x along the forearm, the thumb on the -y side (the left arm is drawn
+// mirrored in y, so both hands show the same face to the viewer). Each finger has two segments; curl c (0..1) flexes the
+// knuckle and the middle joint, and the segments are foreshortened as they fold over the palm. Parameters:
+//   c0..c3 curl of index, middle, ring, pinky   sp finger spread (0 = together, 1 = fanned)
+//   to  thumb abduction (0 = folded over the palm, 1 = straight out at 90 deg)   tc  curl of the thumb tip
+const HKEYS = ["c0", "c1", "c2", "c3", "sp", "to", "tc"];
+const HP = {
+  relaxed:  {c0: .30, c1: .36, c2: .42, c3: .48, sp: .10, to: .22, tc: .35},   // hanging, slightly curled
+  point:    {c0: 0,   c1: .94, c2: .96, c3: .98, sp: 0,   to: .04, tc: .75},   // index out, thumb folded along the fist
+  open:     {c0: .07, c1: .05, c2: .09, c3: .13, sp: .55, to: .60, tc: .15},   // a natural open palm
+  thumb:    {c0: .96, c1: .98, c2: 1,   c3: 1,   sp: 0,   to: 1,   tc: .04},   // thumbs-up
+  fist:     {c0: .95, c1: .97, c2: 1,   c3: 1,   sp: 0,   to: .05, tc: .75},
+  beatUp:   {c0: .20, c1: .18, c2: .24, c3: .30, sp: .38, to: .55, tc: .30},   // relaxed open palm facing up
+  beatDown: {c0: .12, c1: .10, c2: .15, c3: .22, sp: .10, to: .12, tc: .25},   // loose hand, fingers together, palm down
+  clasp:    {c0: .22, c1: .18, c2: .24, c3: .30, sp: 0,   to: .10, tc: .35},   // hands together in front of the torso
+  shrug:    {c0: .14, c1: .12, c2: .17, c3: .24, sp: .72, to: .75, tc: .20},
+  chin:     {c0: .55, c1: .60, c2: .66, c3: .70, sp: 0,   to: .18, tc: .45},
+};
+const mixP = (a, b, u) => { const o = {}; for (const k of HKEYS) o[k] = lerp(a[k], b[k], u); return o; };
+// n = 1..5 fingers up: each reveals in turn (index, middle, ring, pinky, thumb) with a small overshoot
+function countParams(g, t) {
+  const n = clamp(Math.round(g.n || 1), 1, 5), o = {};
+  const rv = (k) => clamp(springOut((t - g.start - 0.2 - 0.17 * k) / 0.22, 1.1), 0, 1);
+  for (let k = 0; k < 4; k++) o["c" + k] = k < n ? lerp(0.95, 0.03, rv(k)) : 0.96;
+  o.sp = n > 1 ? 0.22 + 0.06 * Math.min(n, 4) : 0; o.tc = 0.7;
+  o.to = n === 5 ? lerp(0.05, 0.7, rv(4)) : 0.05;
+  return o;
+}
+const FING = [
+  {x: 10.5, y: -11.2, l1: 12.0, l2: 10.6, w: 8.6, a: -.36, hd: 1.0},    // index
+  {x: 11.6, y: -3.8,  l1: 13.4, l2: 12.0, w: 8.8, a: -.11, hd: 0.35},   // middle
+  {x: 10.8, y: 3.7,   l1: 12.0, l2: 11.0, w: 8.5, a: .12,  hd: -0.35},  // ring
+  {x: 8.8,  y: 10.6,  l1: 9.8,  l2: 8.8,  w: 7.6, a: .38,  hd: -1.0},   // pinky
+];
+const THUMB = {x: 1.0, y: -9.0, l1: 11.0, l2: 9.0, w: 9.6, wOut: 11.2, l1Out: 12.0, l2Out: 10.0};
+const PALM_OPEN = "M-11,-8 C-9,-11.4 -4,-14 3,-14 L9.4,-14 C11.5,-14 12.4,-12.6 12.4,-10.8 L12.4,10 C12.4,12.6 10.8,14 8.4,14 L4.6,14 C-2,14 -7.4,11.4 -11,8";   // the palm outline without the wrist edge
+const PALM = PALM_OPEN + " Z";
+// leo's hands: slightly larger with squarer knuckles (a wider, squarer palm, thicker fingers); the same parametric system
+const FING_M = FING.map(f => ({...f, y: f.y * 1.05, w: f.w * 1.1, l1: f.l1 * 1.04, l2: f.l2 * 1.04}));
+const THUMB_M = {x: 1.0, y: -9.6, l1: 11.4, l2: 9.4, w: 10.6, wOut: 12.3, l1Out: 12.5, l2Out: 10.4};
+const PALM_OPEN_M = "M-11,-9 C-9.4,-12.4 -4,-15 3,-15 L10.6,-15 C12.6,-15 13.6,-13.8 13.6,-12 L13.6,12 C13.6,13.8 12.6,15 10.6,15 L4.6,15 C-2,15 -7.4,12.6 -11,9";
+let FS = FING, TS = THUMB;
+const RIM = 1.7;
+const OLH = 1.3;                                   // outline thickness beyond the fill (hands)
+const SVGNS = "http://www.w3.org/2000/svg";
+const HANDS = {};
+const mkEl = (parent, tag, attrs) => { const e = document.createElementNS(SVGNS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); parent.appendChild(e); return e; };
+// Every finger = an outline (a darker tone of the skin), a shade silhouette and a lit surface nudged toward the key light, so a cel shade
+// shows only on the lower / right edge; fingers taper a little toward the tip. Pinky first, so the index ends on top.
+function buildHand(side) {
+  const g = $("hand" + side); g.innerHTML = "";
+  const H = {g, fing: [], tips: []};
+  const sg = ARMS[side].stkHand; sg.innerHTML = "";
+  H.sg = sg; H.spalm = mkEl(sg, "path", {d: PALM}); H.sfing = FING.map(() => mkEl(sg, "path", {})); H.sth = mkEl(sg, "path", {});
+  H.pol = mkEl(g, "path", {d: PALM_OPEN, fill: "none", stroke: "var(--skinLine)", "stroke-width": 2 * OLH, "stroke-linejoin": "round", "stroke-linecap": "round"});
+  H.palm = mkEl(g, "path", {d: PALM, fill: "var(--skin)"});
+  H.heel = mkEl(g, "path", {d: "M-10.4,1 C-6,11 0,13.4 7.6,13 C4,8.6 -4,2.6 -10.4,1 Z", fill: "var(--skin2)", opacity: ".3"});
+  H.hi = mkEl(g, "path", {d: "M-6,-9.4 C-2,-12 4,-12.4 8.6,-11.6 C4,-9 -1,-6.6 -6,-9.4 Z", fill: "var(--skinHi)", opacity: ".32"});
+  H.pcrease = mkEl(g, "path", {d: "M-5.6,-4.6 C-1.6,-1 -0.4,4 -2.4,8.6", fill: "none", stroke: "var(--skinLine)", "stroke-width": ".9", "stroke-linecap": "round", opacity: ".2"});
+  for (let i = 3; i >= 0; i--) H.fing[i] = {ol: mkEl(g, "path", {fill: "var(--skinLine)"}), sh: mkEl(g, "path", {fill: "var(--skin2)"}), f: mkEl(g, "path", {fill: "var(--skin)"})};
+  H.tol = mkEl(g, "path", {fill: "var(--skinLine)"}); H.tsh = mkEl(g, "path", {fill: "var(--skin2)"}); H.th = mkEl(g, "path", {fill: "var(--skin)"});
+  H.crease = mkEl(g, "path", {fill: "none", stroke: "var(--skinLine)", "stroke-width": "1", "stroke-linecap": "round", opacity: ".32"});
+  HANDS[side] = H;
+}
+// a two-segment digit as a union of two tapered capsules (the same winding, so the paths union under nonzero fill)
+const digit = (a, b, c, w0, w1, w2, g, k) => {
+  const dx = b[0] - a[0], dy = b[1] - a[1], dl = Math.hypot(dx, dy) || 1, kk = Math.min(k, dl), q = k ? [a[0] + dx / dl * kk, a[1] + dy / dl * kk] : a;
+  return limb(q, b, w0 + g, w1 + g) + " " + limb(b, c, w1 + g, w2 + g);
+};
+// Draws hand params p at pos with the forearm direction deg (mirror: the left arm is drawn flipped in y).
+function drawHand(side, p, pos, deg, mirror) {
+  const H = HANDS[side], f1 = (v) => v.toFixed(1);
+  const tr = `translate(${f1(pos[0])},${f1(pos[1])}) rotate(${f1(deg)})${mirror ? " scale(1,-1)" : ""}`;
+  H.g.setAttribute("transform", tr); if (STICKER) H.sg.setAttribute("transform", tr);
+  // screen-space light from the upper left: the shadow offset in the hand's own frame
+  const th = deg * Math.PI / 180, lx = -0.55, ly = -0.8;
+  let sx = Math.cos(-th) * lx - Math.sin(-th) * ly, sy = Math.sin(-th) * lx + Math.cos(-th) * ly;
+  if (mirror) sy = -sy;
+  const shT = `translate(${sx.toFixed(2)},${sy.toFixed(2)})`;
+  const tips = [], creases = [];
+  const sp = clamp(p.sp, 0, 1);
+  for (let i = 0; i < 4; i++) {
+    const F = FS[i], c = clamp(p["c" + i], 0, 1), ang = F.a * sp;
+    const th1 = c * 1.5, th2 = c * 2.0, ca = Math.cos(ang), sa = Math.sin(ang);
+    const d1 = F.l1 * Math.cos(th1), d2 = F.l2 * Math.cos(th1 + th2);
+    const hk = F.hd * c;                                                   // curling fingers pull in toward the centre line
+    const p0 = [F.x, F.y + F.hd * 0], p1 = [F.x + ca * d1, F.y + sa * d1 + hk * 2.2], p2 = [p1[0] + ca * d2, p1[1] + sa * d2 + hk * 2.6];
+    const w0 = F.w, w1 = F.w * 0.95, w2 = F.w * 0.84, FI = H.fing[i];
+    FI.ol.setAttribute("d", digit(p0, p1, p2, w0, w1, w2, 2 * OLH, 4.5));
+    FI.sh.setAttribute("d", digit(p0, p1, p2, w0, w1, w2, 0, 4.5));
+    FI.f.setAttribute("d", digit(p0, p1, p2, w0, w1, w2, -RIM, 0)); FI.f.setAttribute("transform", shT);
+    if (STICKER) H.sfing[i].setAttribute("d", digit(p0, p1, p2, w0, w1, w2, 0, 0));
+    tips.push([p2[0], p2[1], F.w / 2]);
+    if (c < 0.3) { const k = 0.34 - c * 0.6, nx = -sa, ny = ca; creases.push(`M${f1(p1[0] - nx * F.w * k)},${f1(p1[1] - ny * F.w * k)} L${f1(p1[0] + nx * F.w * k)},${f1(p1[1] + ny * F.w * k)}`); }
+  }
+  const to = clamp(p.to, 0, 1), tc = clamp(p.tc, 0, 1);
+  const b1 = lerp(0.42, -1.5, to), b2 = b1 + tc * 0.95;
+  const tw = lerp(TS.w, TS.wOut, to), tl1 = lerp(TS.l1, TS.l1Out, to), tl2 = lerp(TS.l2, TS.l2Out, to);   // an extended thumb is longer and thicker (it faces the viewer)
+  const t0 = [TS.x, TS.y], t1 = [t0[0] + tl1 * Math.cos(b1), t0[1] + tl1 * Math.sin(b1)], t2 = [t1[0] + tl2 * Math.cos(b2), t1[1] + tl2 * Math.sin(b2)];
+  H.tol.setAttribute("d", digit(t0, t1, t2, tw, tw * 0.94, tw * 0.84, 2 * OLH, 3.5));
+  H.tsh.setAttribute("d", digit(t0, t1, t2, tw, tw * 0.94, tw * 0.84, 0, 3.5));
+  H.th.setAttribute("d", digit(t0, t1, t2, tw, tw * 0.94, tw * 0.84, -RIM, 0)); H.th.setAttribute("transform", shT);
+  if (STICKER) H.sth.setAttribute("d", digit(t0, t1, t2, tw, tw * 0.94, tw * 0.84, 0, 0));
+  tips.push([t2[0], t2[1], tw / 2]);
+  H.crease.setAttribute("d", creases.join(" "));
+  H.hi.setAttribute("transform", shT);
+  H.tips = tips;
+  // fingertip positions in rig coordinates, for tests (window.__rig)
+  const co = Math.cos(th), si = Math.sin(th), m = mirror ? -1 : 1;
+  H.tipsRoot = tips.map(([x, y, r]) => [pos[0] + co * x - si * y * m, pos[1] + si * x + co * y * m, r]);
+}
+
+// ---------- poses --------------------------------------------------------------------------------
+const SHL = [146, 312], SHR = [254, 312];
+// Idle poses: hand targets per arm, hand presets, and a look/tilt flavour. Blended over 0.8 s.
+const POSES = {
+  rest:  {L: [132, 398], R: [268, 398], hL: "relaxed", hR: "relaxed", look: [0, 0], tilt: 0},
+  clasp: {L: [186, 398], R: [214, 398], hL: "relaxed", hR: "relaxed", look: [0, 0.1], tilt: 0},
+  chin:  {L: [190, 398], R: [236, 252], hL: "relaxed", hR: "chin", look: [0.12, -0.3], tilt: 3.5},
+  hip:   {L: [116, 372], R: [268, 398], hL: "relaxed", hR: "relaxed", look: [-0.1, 0], tilt: -2},
+};
+const poseJoints = (pz) => pz.J || (pz.J = {L: jointsFor(SHL, pz.L, 1), R: jointsFor(SHR, pz.R, -1)});
+function idlePose(T, t) {
+  const sched = (T.idle && T.idle.length) ? T.idle : [{start: 0, pose: "rest"}];
+  let i = 0; while (i + 1 < sched.length && sched[i + 1].start <= t) i++;
+  const a = POSES[sched[i].pose] || POSES.rest, pa = poseJoints(a);
+  if (i === 0) return {...a, u: 1, hLb: a.hL, hRb: a.hR, JL: pa.L, JR: pa.R};
+  const b = POSES[sched[i - 1].pose] || POSES.rest, pb = poseJoints(b);
+  const u = easeInOutCubic((t - sched[i].start) / 0.8);
+  return {L: [lerp(b.L[0], a.L[0], u), lerp(b.L[1], a.L[1], u)], R: [lerp(b.R[0], a.R[0], u), lerp(b.R[1], a.R[1], u)],
+          JL: jLerp(pb.L, pa.L, u, "L"), JR: jLerp(pb.R, pa.R, u, "R"),
+          hL: a.hL, hR: a.hR, hLb: b.hL, hRb: b.hR, u,
+          look: [lerp(b.look[0], a.look[0], u), lerp(b.look[1], a.look[1], u)], tilt: lerp(b.tilt, a.tilt, u)};
+}
+
+// ---------- arms ----------------------------------------------------------------------------------
+// aim: the thing a pointing finger should line up with; wristW: how far the wrist has caught up (follow-through)
+// o: {hand: params, thumbW (0..1: a thumbs-up stays upright), tilt (rad, fingers toward screen-up), aim, wristW}
+// One arm = a skin forearm (outline, cool rim, shade, light, highlight) under a short rounded sleeve (outline, rim, shade, light, hem
+// band with a fold shadow, seam, folds that gather when the arm lifts). The lit surface of every limb is the silhouette nudged toward
+// the key light, so the shade and the cool rim light show only on the lower / right edges (no clip paths, no filters).
+const SW0 = 33, SW1 = 27, OLW = 1.3;
+const FO_W = [23, 16];
+const ARMS = {};
+function buildArm(side) {
+  const g = $("arm" + side); g.innerHTML = "";
+  const A = ARMS[side] = {};
+  const layers = (parent, o) => { const L = {}; for (const k in o) L[k] = mkEl(parent, "path", o[k]); return L; };
+  A.foG = mkEl(g, "g", {});
+  A.fo = layers(A.foG, {ol: {fill: "var(--skinLine)"}, sd: {fill: "var(--skin2)"}, lit: {fill: "var(--skin)", transform: "translate(-1.3,-1.6)"},
+    hi: {fill: "var(--skinHi)", opacity: ".36", transform: "translate(-2.4,-2.8)"}, cs: {fill: "var(--skinLine)", opacity: ".3"},
+    rim: {fill: "none", stroke: "var(--skinRim)", "stroke-width": "1.5", "stroke-linecap": "round", opacity: "0"}});
+  A.slG = mkEl(g, "g", {});
+  // the sleeve is kept simple: its body, the hem band and ONE clean seam (the gathers under a lifted arm are drawn on the torso, #pitL/#pitR)
+  A.sl = layers(A.slG, {ol: {fill: "var(--shirtLine)"}, sd: {fill: "var(--shirt2)"}, lit: {fill: "var(--shirt)", transform: "translate(-1.5,-1.9)"},
+    hem: {fill: "var(--shirt2)"},
+    seam: {fill: "none", stroke: "var(--shirtLine)", "stroke-width": "1.5", "stroke-linecap": "round", opacity: ".4"},
+    rim: {fill: "none", stroke: "var(--shirtRim)", "stroke-width": "2", "stroke-linecap": "round", opacity: "0"}});
+  mkEl(g, "circle", {id: "el" + side, r: 0, fill: "none"}); mkEl(g, "circle", {id: "sh" + side, cx: side === "L" ? 146 : 254, cy: 312, r: 0, fill: "none"});
+  mkEl(g, "g", {id: "hand" + side});
+  const sg = $("stkArm" + side); sg.innerHTML = "";
+  A.stkSk = mkEl(sg, "path", {}); A.stkSl = mkEl(sg, "path", {}); A.stkHand = mkEl(sg, "g", {});
+  A.front = false;
+}
+// the cool rim light: a thin line just inside the outline, on the limb's lower / right edge only (the side facing away from the key light);
+// its strength follows how squarely that edge faces away, so it fades out smoothly as the limb turns
+function rimLine(el, P, Q, h1, h2, len) {
+  const dx = Q[0] - P[0], dy = Q[1] - P[1], d = Math.hypot(dx, dy) || 1, nx = -dy / d, ny = dx / d, dot = nx * 0.55 + ny * 0.8, sg = dot >= 0 ? 1 : -1;
+  const a = clamp(Math.abs(dot) * 1.7 - 0.12, 0, 1);
+  el.setAttribute("opacity", (a * 1.0).toFixed(2));
+  if (a > 0) el.setAttribute("d", `M${(P[0] + nx * sg * h1).toFixed(1)},${(P[1] + ny * sg * h1).toFixed(1)} L${(Q[0] + nx * sg * h2).toFixed(1)},${(Q[1] + ny * sg * h2).toFixed(1)}`);
+}
+// aim: the thing a pointing finger should line up with; wristW: how far the wrist has caught up (follow-through)
+// o: {hand: params, thumbW (0..1: a thumbs-up stays upright), tilt (rad, fingers toward screen-up), aim, wristW}
+function setArm(side, S, r, o) {
+  const A = ARMS[side], f1 = (v) => v.toFixed(1), f = (v) => `${v[0].toFixed(1)},${v[1].toFixed(1)}`;
+  const dn = [S[0], S[1] + 8];                                                           // the sleeve starts a little below the joint: no bump
+  const E = r.E, Hd = r.H;
+  const dx = E[0] - dn[0], dy = E[1] - dn[1], d = Math.hypot(dx, dy) || 1, ux = dx / d, uy = dy / d, nx = -uy, ny = ux;
+  // sleeve: outline, rim, shade, light (the same capsule at narrower widths)
+  const sleeve = limb(dn, E, SW0, SW1);
+  A.sl.ol.setAttribute("d", limb(dn, E, SW0 + 2 * OLW, SW1 + 2 * OLW)); A.sl.sd.setAttribute("d", sleeve);
+  A.sl.lit.setAttribute("d", limb(dn, E, SW0 - 5.2, SW1 - 5.2));
+  rimLine(A.sl.rim, dn, E, SW0 / 2 - 1.5, SW1 / 2 - 1.5, d);
+  if (STICKER) A.stkSl.setAttribute("d", sleeve);
+  const at = (u) => [dn[0] + dx * u, dn[1] + dy * u], hw = (u) => lerp(SW0, SW1, u) / 2 - 0.4;
+  { // sleeve hem band and the one clean seam (a curved line across the sleeve a little below the shoulder cap)
+    const a = at(0.76), b = at(0.88), hA = hw(0.76), hB = hw(0.88);
+    A.sl.hem.setAttribute("d", `M${f([a[0] + nx * hA, a[1] + ny * hA])} L${f([b[0] + nx * hB, b[1] + ny * hB])} L${f([b[0] - nx * hB, b[1] - ny * hB])} L${f([a[0] - nx * hA, a[1] - ny * hA])} Z`);
+    const sm = at(0.16), sw = hw(0.16) - 1.2, sc = [sm[0] + ux * 3.2, sm[1] + uy * 3.2];
+    A.sl.seam.setAttribute("d", `M${f([sm[0] + nx * sw, sm[1] + ny * sw])} Q${f(sc)} ${f([sm[0] - nx * sw, sm[1] - ny * sw])}`);
+    // the fabric gathers under the armpit when the arm lifts (a pure function of the arm angle)
+    const raise = clamp((34 - (E[1] - S[1])) / 60, 0, 1);
+    $("pit" + side).setAttribute("opacity", (raise * 0.42).toFixed(2));
+  }
+  // the arm's shadow on the torso (clipped to the torso)
+  $("sha" + side).setAttribute("d", limb([dn[0] + 3, dn[1] + 4], [E[0] + 3, E[1] + 4], SW0, SW1) + " " + limb([E[0] + 2.5, E[1] + 4], [Hd[0] + 2.5, Hd[1] + 4], FO_W[0] - 4, FO_W[1] - 4));
+  $("el" + side).setAttribute("cx", E[0].toFixed(1)); $("el" + side).setAttribute("cy", E[1].toFixed(1));
+  // z-order: a forearm folded back over the upper arm (a hand raised beside the shoulder) is in front of the sleeve
+  const ax = S[0] - E[0], ay = S[1] - E[1], bx = Hd[0] - E[0], by = Hd[1] - E[1];
+  const fold = Math.acos(clamp((ax * bx + ay * by) / ((Math.hypot(ax, ay) * Math.hypot(bx, by)) || 1), -1, 1)), front = fold < 1.2;
+  // forearm: outline (pulled in at the elbow when it lies over the sleeve), rim, shade, light, highlight, and the sleeve's shadow on the skin
+  { const edx = Hd[0] - E[0], edy = Hd[1] - E[1], el = Math.hypot(edx, edy) || 1, eu = [edx / el, edy / el];
+    const Ep = front ? [E[0] + eu[0] * 5, E[1] + eu[1] * 5] : E;
+    A.fo.ol.setAttribute("d", limb(Ep, Hd, FO_W[0] + 2 * OLW, FO_W[1] + 2 * OLW));
+    const fo = limb(E, Hd, FO_W[0], FO_W[1]);
+    A.fo.sd.setAttribute("d", fo); A.fo.lit.setAttribute("d", limb(E, Hd, FO_W[0] - 4.4, FO_W[1] - 4.4));
+    rimLine(A.fo.rim, [E[0] + eu[0] * 4, E[1] + eu[1] * 4], [Hd[0] - eu[0] * 3, Hd[1] - eu[1] * 3], FO_W[0] / 2 - 1.5, FO_W[1] / 2 - 1.5, el);
+    A.fo.hi.setAttribute("d", limb([E[0] + eu[0] * 6, E[1] + eu[1] * 6], [Hd[0] - eu[0] * 3, Hd[1] - eu[1] * 3], FO_W[0] - 14, FO_W[1] - 9));
+    A.fo.cs.setAttribute("d", front ? "" : limb([E[0] + eu[0] * 13, E[1] + eu[1] * 13], [E[0] + eu[0] * 19, E[1] + eu[1] * 19], FO_W[0] - 2.4, FO_W[0] - 2.8));
+    if (STICKER) A.stkSk.setAttribute("d", fo);
+  }
+  let ang = r.dir;
+  if (o.aim && o.wristW > 0) {                                  // bend the wrist so the finger lines up with the target
+    const want = Math.atan2(o.aim[1] - Hd[1], o.aim[0] - Hd[0]);
+    let dlt = want - ang; while (dlt > Math.PI) dlt -= 2 * Math.PI; while (dlt < -Math.PI) dlt += 2 * Math.PI;
+    ang += clamp(dlt, -0.3, 0.3) * o.wristW;
+  }
+  if (o.tilt) ang += o.tilt * -Math.cos(ang);                   // a relaxed wrist flick: fingers tip toward screen-up (or droop)
+  let deg = ang * 180 / Math.PI;
+  deg += o.thumbW * THUMBS_TURN;                               // a thumbs-up is a forearm twist, invisible in 2D: the fist turns upright by the same amount the arm reaches its pose
+  drawHand(side, o.hand, Hd, deg, side === "L");
+  if (A.front !== front) {
+    const g = $("arm" + side);
+    if (front) g.insertBefore(A.foG, $("hand" + side)); else g.insertBefore(A.foG, g.firstChild);
+    A.front = front;
+  }
+  $("sh" + side).setAttribute("cx", S[0].toFixed(1)); $("sh" + side).setAttribute("cy", S[1].toFixed(1));
+  return r;
+}
+buildArm("L"); buildArm("R"); buildHand("L"); buildHand("R");
+// the sticker edge of the legacy hair styles (the "ana" hair has its own, animated)
+for (const id of ["hairShort", "fringe", "hairCurly", "hairBun"]) {
+  const src = $(id), parts = id === "hairBun" ? [...src.children] : [src];
+  const g = document.createElementNS(SVGNS, "g"); g.setAttribute("id", "stk_" + id); g.style.display = "none";
+  for (const e of parts) { const c = document.createElementNS(SVGNS, e.tagName); for (const a of ["d", "cx", "cy", "r"]) if (e.hasAttribute(a)) c.setAttribute(a, e.getAttribute(a)); g.appendChild(c); }
+  $("stkLegacy").appendChild(g);
+}
+window.setStyle(window.__style || "leo", window.__ovr);
+const FRONT = {L: false, R: false};
+const THUMBS_TURN = wrapPi(-jointsFor(SHR, [306, 250], -1).b) * 180 / Math.PI;   // degrees from the forearm direction at the thumbs-up pose to upright
+window.__rig = {hands: HANDS};
+
+// ---------- deterministic helpers: saccades, loudness, phrases, mood ---------------------------------------
+function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+// Eye saccades: the iris jumps (in ~0.06 s) to a new tiny offset every 0.3-1.2 s; every few seconds a larger gaze shift
+// (away, then back) that is usually accompanied by a blink. A seeded schedule, so frame t is a pure function of t.
+function genSaccades(seed, dur) {
+  const rnd = mulberry32(seed * 7919 + 17), ev = [{t: -10, x: 0, y: 0, d: 0.06}], blinks = [];
+  const end = Math.max(dur, 20) + 4;
+  let t = 0.25 + rnd() * 0.6, nextBig = 2.2 + rnd() * 2.5, away = false, awayT = 0, bx = 0, by = 0;
+  while (t < end) {
+    let big = false, x, y, bp = 0;
+    if (away && t - awayT > 0.9 + rnd() * 0.9) { away = false; bx = 0; by = 0; x = (rnd() - 0.5) * 1.2; y = (rnd() - 0.5) * 0.8; big = true; bp = 0.4; }
+    else if (!away && t > nextBig) {
+      const sg = rnd() < 0.5 ? -1 : 1; away = true; awayT = t; bx = sg * (3.6 + rnd() * 2.2); by = (rnd() - 0.6) * 3.4;
+      x = bx; y = by; big = true; bp = 0.75; nextBig = t + 3.5 + rnd() * 3.5;
+    } else { x = bx + (rnd() * 2 - 1) * 1.7; y = by + (rnd() * 2 - 1) * 1.0; }
+    ev.push({t, x, y, d: big ? 0.11 : 0.055});
+    if (big && rnd() < bp) blinks.push(+(t - 0.04).toFixed(3));
+    t += big ? 0.8 + rnd() * 0.5 : 0.3 + rnd() * 0.9;
+  }
+  return {ev, blinks};
+}
+function saccadeAt(S, t) {
+  const ev = S.ev; let lo = 0, hi = ev.length - 1;
+  while (lo < hi) { const m = (lo + hi + 1) >> 1; if (ev[m].t <= t) lo = m; else hi = m - 1; }
+  const a = ev[lo], b = ev[Math.max(0, lo - 1)], u = smooth((t - a.t) / a.d);
+  return [lerp(b.x, a.x, u), lerp(b.y, a.y, u)];
+}
+// Narration loudness (0..1 at E.fps), lightly smoothed; null when the timeline has none.
+function envAt(T, t) {
+  const E = T.energy; if (!E || !E.values || !E.values.length) return null;
+  const v = E.values, fps = E.fps || 10, at = (tt) => { const x = clamp(tt * fps, 0, v.length - 1), i = Math.floor(x), f = x - i; return lerp(v[i], v[Math.min(v.length - 1, i + 1)], f); };
+  return clamp(0.25 * at(t - 0.1) + 0.5 * at(t) + 0.25 * at(t + 0.1), 0, 1);
+}
+// Stressed peaks of the loudness envelope: local maxima that stand out from the last ~2 s; at least 0.9 s apart.
+function findPeaks(E) {
+  const v = E.values, fps = E.fps || 10, out = [];
+  for (let i = 2; i < v.length - 2; i++) {
+    if (v[i] < 0.5 || v[i] < v[i - 1] || v[i] < v[i + 1] || v[i] < v[i - 2] || v[i] < v[i + 2]) continue;
+    let m = 0, n = 0; for (let j = Math.max(0, i - 20); j < i - 2; j++) { m += v[j]; n++; }
+    if (n && v[i] < m / n + 0.12) continue;
+    const tt = i / fps; if (out.length && tt - out[out.length - 1].t < 0.9) continue;
+    out.push({t: tt, a: clamp((v[i] - 0.4) / 0.5, 0.35, 1)});
+  }
+  return out;
+}
+// Phrase starts (a sentence or clause begins after a pause in the mouth cues; else from the syllable beats; else the talking spans)
+function phraseStarts(T) {
+  const out = [];
+  if (T.mouth && T.mouth.length) {
+    let pause = true;
+    for (const c of T.mouth) {
+      if (c.value === "X") { if (c.end - c.start >= 0.32) pause = true; }
+      else { if (pause) out.push(c.start); pause = false; }
+    }
+  } else if (T.beats && T.beats.length) {
+    let last = -9; for (const b of T.beats) { if (b - last > 0.9) out.push(b); last = b; }
+  } else for (const s of (T.talking || [])) out.push(s.start);
+  return out.map((st, i) => ({t: st, a: (i % 2 ? 1 : -1) * (0.8 + 1.4 * hash01(i * 3.7 + 1))}));
+}
+function phraseTilt(P, t) {
+  let lo = -1, hi = P.length - 1;
+  while (lo < hi) { const m = (lo + hi + 1) >> 1; if (P[m].t <= t) lo = m; else hi = m - 1; }
+  if (lo < 0) return 0;
+  return lerp(lo ? P[lo - 1].a : 0, P[lo].a, smooth((t - P[lo].t) / 0.5));
+}
+// Mood spans bias the resting smile (0 = today's look, 1 = broad smile) and the brows (-1 furrowed .. 1 raised); neighbouring
+// spans cross-fade over 0.4 s centred on the boundary, outside any span the bias fades to 0.
+function moodAt(T, t) {
+  let sm = 0, br = 0, sw = 0;
+  if (T.mood) for (const m of T.mood) {
+    const w = smooth((t - (m.start - 0.2)) / 0.4) * smooth((m.end + 0.2 - t) / 0.4);
+    if (w > 0) { sm += w * (m.smile || 0); br += w * (m.brow || 0); sw += w; }
+  }
+  if (sw > 1) { sm /= sw; br /= sw; }
+  return {smile: clamp(sm, 0, 1), brow: clamp(br, -1, 1)};
+}
+
+
+// ---------- face drawing: brows, eyes (through an aperture), the closed smile, the hair silhouette ------------------------------
+const MOUTHS = [...document.querySelectorAll("#mouth .m")];
+// A tapered brow: as thick as the original stroke (6.5) over the inner part, softly narrowing to the tail, rounded at the inner end.
+function browShape(P, o = {h0: 0.85, h1: 2.4}) {
+  const N = 22, top = [], bot = [], f = (v) => v[0].toFixed(1) + "," + v[1].toFixed(1);
+  const q = (u) => [(1 - u) * (1 - u) * P[0][0] + 2 * u * (1 - u) * P[1][0] + u * u * P[2][0], (1 - u) * (1 - u) * P[0][1] + 2 * u * (1 - u) * P[1][1] + u * u * P[2][1]];
+  const dq = (u) => { const x = 2 * (1 - u) * (P[1][0] - P[0][0]) + 2 * u * (P[2][0] - P[1][0]), y = 2 * (1 - u) * (P[1][1] - P[0][1]) + 2 * u * (P[2][1] - P[1][1]), d = Math.hypot(x, y) || 1; return [x / d, y / d]; };
+  const half = (u) => o.h0 + o.h1 * smooth(u / 0.72);
+  for (let i = 0; i <= N; i++) { const u = i / N, c = q(u), d = dq(u), h = half(u); top.push([c[0] - d[1] * h, c[1] + d[0] * h]); bot.push([c[0] + d[1] * h, c[1] - d[0] * h]); }
+  const e = q(1), de = dq(1), he = half(1);
+  // the cap runs from the top edge's end around the inner tip to the bottom edge's end
+  const capPts = []; for (let k = 1; k < 7; k++) { const a = Math.PI * k / 7; capPts.push([e[0] + (-de[1] * Math.cos(a) + de[0] * Math.sin(a)) * he, e[1] + (de[0] * Math.cos(a) + de[1] * Math.sin(a)) * he]); }
+  return "M" + top.map(f).join(" L") + " L" + capPts.map(f).join(" L") + " L" + bot.reverse().map(f).join(" L") + " Z";
+}
+function browHi(P) {
+  const f = (v) => v[0].toFixed(1) + "," + v[1].toFixed(1), pts = [];
+  for (let i = 0; i <= 8; i++) { const u = 0.3 + 0.55 * i / 8; pts.push([(1 - u) * (1 - u) * P[0][0] + 2 * u * (1 - u) * P[1][0] + u * u * P[2][0], (1 - u) * (1 - u) * P[0][1] + 2 * u * (1 - u) * P[1][1] + u * u * P[2][1] - 1.1]); }
+  return "M" + pts.map(f).join(" L");
+}
+// (the brows, the face contour and its rim light are built per style by applyShapes)
+// One eye. The lids are an aperture (a clip path): the upper lid line comes down and the lower lid comes up, so blinks, winks and squints
+// close like real lids (at lid = 1 the aperture is a thin smile-shaped line). Open and unsquinted it is exactly the original eye ellipse.
+function drawEye(side, cx, lid, squint, sg) {
+  const yT = 159 + 17 * lid, yB = lerp(189 - squint, 176.5, lid), hT = 174 - yT, hB = yB - 174, k = 0.5523, rx = 18, f = f2;
+  const top = `M${cx - rx},174 C${cx - rx},${f(174 - hT * k)} ${f(cx - rx * k)},${f(yT)} ${cx},${f(yT)} C${f(cx + rx * k)},${f(yT)} ${cx + rx},${f(174 - hT * k)} ${cx + rx},174`;
+  const bot = `C${cx + rx},${f(174 + hB * k)} ${f(cx + rx * k)},${f(yB)} ${cx},${f(yB)} C${f(cx - rx * k)},${f(yB)} ${cx - rx},${f(174 + hB * k)} ${cx - rx},174 Z`;
+  $("ap" + side + "p").setAttribute("d", top + " " + bot);
+  $("shad" + side).setAttribute("d", top);
+  $("line" + side).setAttribute("d", top);
+  const yAt = (l) => 174 - hT * Math.sqrt(Math.max(0, 1 - (l / rx) * (l / rx))), ox = (l) => cx + sg * l;
+  // the soft lower lid line, only under the middle of the eye
+  const yb = (l) => 174 + hB * Math.sqrt(Math.max(0, 1 - (l / rx) * (l / rx))), ye = yb(12.5);
+  $("low" + side).setAttribute("d", `M${f(cx - 12.5)},${f(ye)} Q${cx},${f(2 * yb(0) - ye + 1.4)} ${f(cx + 12.5)},${f(ye)}`);
+  // tiny lashes at the outer corner only, and a small wing on the lid line
+  $("ls" + side).setAttribute("d", STYLE.male ? "" : `M${f(ox(17.4))},${f(yAt(17.4))} L${f(ox(20.4))},${f(yAt(17.4) - 2.6)} M${f(ox(15))},${f(yAt(15))} L${f(ox(17.2))},${f(yAt(15) - 3.4)} M${ox(18)},174 L${f(ox(20.4))},${f(173 - 0.4 * lid)}`);
+}
+// the closed smile (line + lower lip + highlight + dimples), driven by the mood smile ms
+function closedMouth(ms) {
+  const M = STYLE.male, L = [-21 - 2 * ms, -2 - 3.4 * ms], R = [22 + 2 * ms, -4 - 3.4 * ms], C = [0, (M ? 9 : 10) + 3.5 * ms], f = f2;   // leo: a slightly flatter lip line
+  const q = (u) => [(1 - u) * (1 - u) * L[0] + 2 * u * (1 - u) * C[0] + u * u * R[0], (1 - u) * (1 - u) * L[1] + 2 * u * (1 - u) * C[1] + u * u * R[1]];
+  $("mX1").setAttribute("d", `M${f(L[0])},${f(L[1])} Q0,${f(C[1])} ${f(R[0])},${f(R[1])}`);
+  const u0 = 0.15, u1 = 0.85, P0 = q(u0), P1 = q(u1), ym = q(0.5)[1], depth = (M ? 5.2 : 6.4) + 0.8 * ms, cy2 = 2 * (ym + depth) - (P0[1] + P1[1]) / 2;
+  const cs = [L[0] * (1 - u0) * (1 - u1) + C[0] * ((1 - u0) * u1 + u0 * (1 - u1)) + R[0] * u0 * u1, L[1] * (1 - u0) * (1 - u1) + C[1] * ((1 - u0) * u1 + u0 * (1 - u1)) + R[1] * u0 * u1];
+  $("mXlow").setAttribute("d", `M${f(P0[0])},${f(P0[1])} Q0,${f(cy2)} ${f(P1[0])},${f(P1[1])} Q${f(cs[0])},${f(cs[1])} ${f(P0[0])},${f(P0[1])} Z`);
+  $("mXhi").setAttribute("d", `M-6.4,${f(ym + depth * 0.46)} Q0,${f(ym + depth * 0.46 + 1.6)} 5.6,${f(ym + depth * 0.46 + 0.4)}`);
+  $("mX2").setAttribute("d", `M${f(R[0] + 1.6)},${f(R[1] - 2.6)} Q${f(R[0] + 4.8)},${f(R[1] + 0.4)} ${f(R[0] + 2.2)},${f(R[1] + 3.4)}`);
+  $("mXd").setAttribute("d", `M${f(L[0] - 1.6)},${f(L[1] - 2.6)} Q${f(L[0] - 4.8)},${f(L[1] + 0.4)} ${f(L[0] - 2.2)},${f(L[1] + 3.4)}`);
+}
+// the hair silhouette ("long" = the short swept cap with two short side strands): the tip offsets let the strands sway
+function hairLongOuterD(ldx, ldy, rdx, rdy) {   // the outer edge only (tip, dome, tip): the cool edge light never runs along the hairline
+  const g = (v) => v.toFixed(2);
+  return `M${g(102 + ldx)},${g(240 + ldy)} L116,210 C100,76 160,52 200,54 C244,52 304,78 286,210 L${g(296 + rdx)},${g(240 + rdy)}`;
+}
+function hairLongD(ldx, ldy, rdx, rdy) {
+  const g = (v) => v.toFixed(2);
+  return `M116,210 C100,76 160,52 200,54 C244,52 304,78 286,210 L${g(296 + rdx)},${g(240 + rdy)} C${g(296 + rdx * 0.5)},176 270,112 200,108 C130,112 ${g(102 + ldx * 0.5)},176 ${g(102 + ldx)},${g(240 + ldy)} Z`;
+}
+
+// leo's quiff lock: the front lock that sweeps from the part over the right of the forehead; (dx,dy) displaces its tip only
+function hairMenLock(dx, dy) {
+  const g = (v) => v.toFixed(2), tx = 244 + dx, ty = 114.6 + dy;
+  const lock = `M177,99.6 C196,97.6 216,100 232,103.4 C239,105.4 244,108.4 ${g(tx)},${g(ty)} C${g(238 + dx * 0.6)},${g(114 + dy * 0.6)} 224,111.6 210,108.4 C196,105.8 184,105 177,104.4 Z`;
+  const edge = `M177,104.4 C184,105 196,105.8 210,108.4 C224,111.6 ${g(238 + dx * 0.6)},${g(114 + dy * 0.6)} ${g(tx)},${g(ty)}`;
+  const hi = `M182,100.6 C198,98.4 218,100.6 232,104.6 C237,106.2 240.5,108 ${g(242.4 + dx * 0.8)},${g(110.6 + dy * 0.8)}`;
+  return [["hmLock", lock], ["hmLockSh", edge], ["hmLockHi", hi]];
+}
+
+window.render = (t) => {
+  const T = window.TIMELINE;
+  for (const k of ["mouth", "blinks", "beats", "gestures", "idle", "glances", "talking", "opacity"]) if (!T[k]) T[k] = [];   // every field is optional
+  if (T.fadeIn == null) T.fadeIn = 0.5; if (T.fadeOut == null) T.fadeOut = 0.5; if (T.duration == null) T.duration = 10;   // 0 = no fade
+  const pose = idlePose(T, t);
+  const EN = STYLE.energy || 1;
+  // --- gestures ----------------------------------------------------------------------------------
+  const mkArm = (side, S, tgt, J) => ({side, target: tgt, J, J0: J, off: [0, 0], w: 0, gw: 0, aim: null, wrist: 0, S: [S[0], S[1]], kind: "relax", hands: [], thumbW: 0, tilt: 0, beat: null});
+  const armL = mkArm("L", SHL, pose.L, pose.JL), armR = mkArm("R", SHR, pose.R, pose.JR);
+  // move an arm toward a gesture's hand target by weight w: the hand target (for offsets) and the joint angles both blend
+  const setTarget = (arm, S, tgt, w, from, lo) => {
+    const f0 = from || arm;                                        // wave/thumbs blend from the idle pose, the rest from the arm's current state
+    arm.J = jLerp(f0.J, jointsFor(S, tgt, arm.J0.bend), Math.min(w, 1), arm.side, lo);   // joints stop at the pose...
+    arm.target = [lerp(f0.target[0], tgt[0], w), lerp(f0.target[1], tgt[1], w)];
+    if (w > 1) { arm.off[0] += (tgt[0] - f0.target[0]) * (w - 1); arm.off[1] += (tgt[1] - f0.target[1]) * (w - 1); }   // ...and the ease-out overshoot is a hand offset along the move
+  };
+  let look = [pose.look[0], pose.look[1]], lean = 0, browUp = 0, nodW = 0, thumbW = 0, lookW = 0, lookAim = null, wink = 0;
+  let turn = 0, headTilt = 0, lift = {L: 0, R: 0}, dip = 0, beatBrow = 0;
+  const idx = memo("beatIdx", T.gestures, () => { let k = 0; return T.gestures.map(g => g.type === "beat" ? k++ : -1); });
+  const beats = [];
+  T.gestures.forEach((g, gi) => {
+    const K = ENV_K[g.type], w = gestureWeight(g, t, K);
+    const aim = g.target || [40, 230];
+    const useLeft = g.side ? g.side === "L" : aim[0] < 200;
+    // eyes lead the hand and linger after it: a wider, softer window than the arm's
+    const lw = spanW({start: g.start - 0.3, end: g.end + 0.3}, t, 0.3);
+    if ((g.type === "point" || g.type === "present") && lw > lookW) { lookW = lw; lookAim = aim; }
+    if (w === 0) return;
+    const wl = clamp(w, 0, 1);
+    const wh = clamp(gestureWeight(g, t - 0.06, K), 0, 1);               // the fingers follow a beat after the arm
+    if (g.type === "point" || g.type === "present") {
+      const arm = useLeft ? armL : armR;
+      const S0 = useLeft ? SHL : SHR;
+      // A natural reach: out to the side, never folded up beside the head or back across the body. Work in a frame
+      // where "outward" is +x for either arm, hold the arm inside a cone (up to 55 deg above horizontal, 75 below),
+      // and let the eyes and head carry the rest when the target lies beyond it. Most targets sit far above the host,
+      // which used to swing the arm up with a folded elbow and a wrist bent backward.
+      const out = useLeft ? -1 : 1;
+      const ts = out * 5.7 * wl;                                                      // the torso turns ~3 deg toward the target
+      const rawAng = Math.atan2(aim[1] - S0[1], (aim[0] - S0[0]) * out);
+      const UP = 55 * Math.PI / 180, DOWN = 75 * Math.PI / 180;
+      const ang = clamp(rawAng, -UP, DOWN), held = Math.abs(ang - rawAng) > 0.02;
+      const dx = Math.cos(ang) * out, dy = Math.sin(ang);
+      const reach = g.type === "point" ? 126 : 94;                                  // a pointing arm is almost straight
+      const shrug = [dx * 7 * wl + ts, dy * 5 * wl];                                 // the shoulder moves toward the target...
+      const tgt = [S0[0] + shrug[0] + dx * reach, S0[1] + shrug[1] + dy * reach];    // ...so reach is measured from where it ends up
+      const aimHand = held ? [S0[0] + dx * 1000, S0[1] + dy * 1000] : aim;           // when held, the finger follows the arm
+      arm.hands.push({p: g.type === "point" ? HP.point : HP.open, w: wh});
+      if (Math.abs(w) > Math.abs(arm.w)) {
+        arm.w = w; arm.gw = Math.max(arm.gw, wl); arm.kind = g.type; arm.aim = g.type === "point" ? aimHand : null;
+        setTarget(arm, [S0[0] + shrug[0], S0[1] + shrug[1]], tgt, w);
+        arm.wrist = clamp(gestureWeight(g, t - 0.07), 0, 1) * (held ? 0.25 : 1);   // the wrist catches up a beat later
+        arm.S = [S0[0] + shrug[0], S0[1] + shrug[1]]; arm.sSet = true;              // a small shrug toward the target
+        lean = out * 2.4 * wl;
+        turn = out * wl;
+        browUp = Math.max(browUp, wl);
+      }
+    } else if (g.type === "wave") {
+      const wig = 16 * Math.sin(2 * Math.PI * 2.4 * (t - g.start)) * (t > g.start && t < g.end ? 1 : 0);
+      const fl = (t > g.start && t < g.end ? 1 : 0) * 0.13;
+      armR.w = wl; armR.gw = Math.max(armR.gw, wl); armR.kind = "wave";
+      setTarget(armR, SHR, [318 + wig, 228], wl, {target: pose.R, J: armR.J0});
+      armR.hands.push({p: {...HP.open, c0: HP.open.c0 + fl * (0.5 + 0.5 * Math.sin(2 * Math.PI * 2.4 * (t - g.start))), c1: HP.open.c1 + fl * (0.5 + 0.5 * Math.sin(2 * Math.PI * 2.4 * (t - g.start) - 0.6)),
+                       c2: HP.open.c2 + fl * (0.5 + 0.5 * Math.sin(2 * Math.PI * 2.4 * (t - g.start) - 1.2)), c3: HP.open.c3 + fl * (0.5 + 0.5 * Math.sin(2 * Math.PI * 2.4 * (t - g.start) - 1.8))}, w: wh});
+      browUp = Math.max(browUp, 0.6 * wl);
+    } else if (g.type === "thumbs") {
+      armR.w = wl; armR.gw = Math.max(armR.gw, wl); armR.kind = "thumb";
+      setTarget(armR, SHR, [306, 250], wl, {target: pose.R, J: armR.J0});
+      armR.hands.push({p: HP.thumb, w: wh}); armR.thumbW = Math.max(armR.thumbW, wh);
+      browUp = Math.max(browUp, 0.5 * wl); thumbW = Math.max(thumbW, wl);
+      if (t > g.start + 0.55 && t < g.start + 1.0) wink = Math.max(wink, Math.sin(Math.PI * (t - g.start - 0.55) / 0.45));   // a wink with the thumbs-up
+    } else if (g.type === "nod") {
+      nodW = Math.max(nodW, wl);
+    } else if (g.type === "count") {
+      const left = g.side ? g.side === "L" : true, arm = left ? armL : armR, S0 = left ? SHL : SHR, out = left ? -1 : 1;
+      let bump = 0;                                                                   // a small hop as each finger is revealed
+      for (let k = 0; k < clamp(Math.round(g.n || 1), 1, 5); k++) { const u = (t - g.start - 0.2 - 0.17 * k) / 0.3; if (u > 0 && u < 1) bump += Math.sin(Math.PI * Math.min(1, u * 1.6)) * (1 - u) * (k ? 1 : 0.5); }
+      const tgt = [S0[0] + out * 38, S0[1] - 4 - 3 * Math.min(bump, 1.2) * wl];
+      arm.hands.push({p: countParams(g, t), w: wh});
+      if (Math.abs(w) > Math.abs(arm.w)) {
+        arm.w = w; arm.gw = Math.max(arm.gw, wl); arm.kind = "count";
+        setTarget(arm, S0, tgt, w, null, -60 * Math.PI / 180);          // a low elbow: the forearm may swing up through the chest
+        browUp = Math.max(browUp, 0.5 * wl);
+      }
+    } else if (g.type === "shrug") {
+      const sg = (Math.floor(g.start * 10) % 2) ? 1 : -1;
+      for (const [arm, S0, out, nm] of [[armL, SHL, -1, "L"], [armR, SHR, 1, "R"]]) {
+        lift[nm] += 7 * wl;
+        const tgt = [S0[0] + out * 48, S0[1] - 7 * wl + 58];
+        arm.hands.push({p: HP.shrug, w: wh});
+        if (Math.abs(w) > Math.abs(arm.w)) {
+          arm.w = w; arm.gw = Math.max(arm.gw, wl); arm.kind = "shrug"; arm.tilt = 0.4 * wl;
+          setTarget(arm, S0, tgt, w);
+        }
+      }
+      headTilt += sg * 5 * wl; browUp = Math.max(browUp, 0.9 * wl); dip += 1.5 * wl;
+    } else if (g.type === "hands") {
+      const tg = {L: [189, 366], R: [211, 371]};
+      for (const [arm, nm] of [[armL, "L"], [armR, "R"]]) {
+        arm.hands.push({p: HP.clasp, w: wh});
+        setTarget(arm, nm === "L" ? SHL : SHR, tg[nm], w);
+        if (Math.abs(w) > Math.abs(arm.w)) { arm.w = w; arm.kind = "hands"; }
+      }
+    } else if (g.type === "beat") {
+      const k = idx[gi], side = g.side || (k % 2 ? "R" : "L");
+      const s = clamp(g.strength ?? 0.6, 0, 1);
+      const h = Math.imul(Math.round(g.start * 100) + 11, 2654435761) >>> 0;
+      const up = g.palm ? g.palm === "up" : ((h >>> 9) % 3) !== 2;                   // mostly palm-up, sometimes palm-down
+      beats.push({side, w: wl, wh, s, up, pulse: Math.sin(Math.PI * clamp((t - g.start - 0.1) / 0.35, 0, 1))});
+      lift.L += (side === "L" ? 2.6 : 1.0) * s * wl; lift.R += (side === "R" ? 2.6 : 1.0) * s * wl;
+      dip += 2.2 * s * wl; beatBrow += 0.35 * s * wl;
+    }
+  });
+  // beats are additive: a small lift, wrist flick and hand nudge on top of whatever the arm is already doing (idle pose, clasp,
+  // hands...). Not while another gesture holds that arm, and not when the hand is up at the face (the chin pose).
+  for (const b of beats) {
+    const arm = b.side === "L" ? armL : armR;
+    if (!arm.beat || b.w > arm.beat.w) arm.beat = b;
+  }
+  for (const arm of [armL, armR]) {
+    const b = arm.beat; if (!b) continue;
+    const out = arm === armL ? -1 : 1, free = (1 - Math.min(1, arm.gw)) * clamp((arm.target[1] - 300) / 60, 0, 1);
+    const f = b.w * free, pl = b.pulse * free;
+    const far = clamp((Math.abs(arm.target[0] - 200) - 20) / 60, 0, 1);
+    arm.off[0] -= out * far * (10 + 6 * b.s) * f; arm.off[1] -= (14 + 18 * b.s + (b.up ? 4 : -2)) * f + 7 * b.s * pl;
+    arm.tilt += ((b.up ? 0.34 : -0.22) * f + (b.up ? 0.22 : -0.16) * pl) * b.s;
+    arm.hands.push({p: b.up ? HP.beatUp : HP.beatDown, w: clamp(b.wh * free, 0, 1)});
+  }
+  if (lookAim) {   // gaze toward the target
+    look = [lerp(look[0], clamp((lookAim[0] - 200) / 320, -1, 1), lookW), lerp(look[1], clamp((lookAim[1] - 180) / 300, -1, 1), lookW)];
+  }
+  // glances at the camera override the gaze
+  let glance = 0;
+  for (const s of T.glances) glance = Math.max(glance, spanW(s, t, 0.25));
+  look = [lerp(look[0], 0, glance), lerp(look[1], 0, glance)];
+  for (const s of T.glances) { const u = (t - s.start) / 0.7; if (u >= 0 && u <= 1) browUp = Math.max(browUp, 0.8 * Math.abs(Math.sin(2 * Math.PI * u)) * (1 - 0.3 * u)); }
+  // --- talking / beats --------------------------------------------------------------------------
+  const talk = T.talking.reduce((m, s) => Math.max(m, spanW(s, t, 0.3)), 0);
+  let syl = 0;
+  for (const b of T.beats) { const u = (t - b) / 0.32; if (u >= 0 && u <= 1) syl = Math.max(syl, Math.sin(Math.PI * u) * (1 - 0.5 * u)); }
+  // loudness: 0 = no extra voice-driven motion; absent = today's behaviour (1)
+  const env = envAt(T, t), ef = env === null ? 1 : clamp(env * 2.0, 0, 1.6), efS = env === null ? 1 : 0.4 + 0.6 * Math.min(ef, 1.3);
+  let flash = 0;                                                      // brow flashes on stressed peaks
+  if (T.energy && T.energy.values) for (const pk of memo("peaks", T.energy.values, () => findPeaks(T.energy))) { const u = (t - pk.t + 0.12) / 0.5; if (u >= 0 && u <= 1) flash = Math.max(flash, Math.sin(Math.PI * u) * pk.a); }
+  const mood = moodAt(T, t), ms = mood.smile, mb = mood.brow;
+  // --- mouth: cross-fade shapes, move the jaw -----------------------------------------------
+  const JAW = {X: 0, A: 0.5, B: 2, C: 4, D: 6.5, E: 3, F: 1.5, G: 2, H: 4.5};
+  let cur = "X", nxt = null, blend = 0;
+  for (let i = 0; i < T.mouth.length; i++) {
+    const c = T.mouth[i];
+    if (t >= c.start && t < c.end) {
+      cur = c.value;
+      const n = T.mouth[i + 1];
+      if (n && c.end - t < 0.06) { nxt = n.value; blend = 1 - (c.end - t) / 0.06; }
+      break;
+    }
+  }
+  MOUTHS.forEach(el => {
+    const sk = el.dataset.s;
+    el.setAttribute("opacity", (sk === cur ? 1 - 0.5 * blend : (sk === nxt ? 0.5 * blend : 0)).toFixed(2));
+  });
+  const jaw = lerp(JAW[cur] || 0, JAW[nxt || cur] || 0, blend * 0.5);
+  $("jaw").setAttribute("transform", `translate(0,${(jaw * 0.6).toFixed(2)})`);
+  $("mouth").setAttribute("transform", `translate(200,${(237 - 0.8 * ms).toFixed(2)}) scale(${(1 + 0.08 * Math.max(glance, thumbW) + 0.06 * ms).toFixed(3)},1)`);
+  closedMouth(ms);                                                  // the resting smile: line, lower lip, highlight, dimples
+  $("cheekL").setAttribute("r", f2(18 + 3 * ms)); $("cheekR").setAttribute("r", f2(18 + 3 * ms));
+  $("cheekL").setAttribute("cy", f2(218 - 2.5 * ms)); $("cheekR").setAttribute("cy", f2(218 - 2.5 * ms));
+  // --- eyes: blinks, squint, gaze (saccades) ----------------------------------------------------
+  const seed = (T.seed | 0) || 7, SAC = memo("sac|" + seed + "|" + T.duration, null, () => genSaccades(seed, T.duration));
+  const autoBlinks = memo("ablink", T.blinks, () => SAC.blinks.filter(b => !T.blinks.some(x => Math.abs(x - b) < 0.5)));
+  let lid = 0;
+  for (const b of T.blinks) { const u = (t - b) / 0.17; if (u >= 0 && u <= 1) lid = Math.max(lid, Math.sin(u * Math.PI)); }
+  for (const b of autoBlinks) { const u = (t - b) / 0.17; if (u >= 0 && u <= 1) lid = Math.max(lid, Math.sin(u * Math.PI)); }
+  const squint = 3.5 * thumbW + 1.6 * syl * talk + 0.5 * glance + 2.0 * ms;
+  drawEye("L", 170, lid, squint, -1); drawEye("R", 230, Math.max(lid, wink), squint, 1);   // the lids close through an aperture; the right eye winks
+  const sac = saccadeAt(SAC, t), sacK = (1 - 0.75 * glance) * (1 - 0.4 * lookW);
+  const gazeX = clamp(look[0] * 7 + (1 - glance) * 1.2 * noise(t * 0.7, 1, 1.9, 3.1) + sac[0] * sacK, -8.2, 8.2), gazeY = clamp(look[1] * 4 + (1 - glance) * 0.6 * noise(t * 0.5 + 3) + sac[1] * sacK, -5, 5);
+  const gz = `translate(${gazeX.toFixed(2)},${gazeY.toFixed(2)})`; $("irisGL").setAttribute("transform", gz); $("irisGR").setAttribute("transform", gz);
+  // --- head ---------------------------------------------------------------------------------------
+  const turnH = look[0] + sac[0] * sacK * 0.015;                     // a big gaze shift drags the head a little
+  $("features").setAttribute("transform", `translate(${(turnH * 13).toFixed(2)},${(look[1] * 5).toFixed(2)})`);
+  const hairT = `translate(${(turnH * 6).toFixed(2)},0)`;
+  $("hairG").setAttribute("transform", hairT); if (STICKER) $("stkHairG").setAttribute("transform", hairT);
+  $("earL").setAttribute("rx", 14 + turnH * 5); $("earR").setAttribute("rx", 14 - turnH * 5);
+  $("earLi").setAttribute("rx", 7 + turnH * 3); $("earRi").setAttribute("rx", 7 - turnH * 3);
+  if (STICKER) { $("stkEarL").setAttribute("rx", 14 + turnH * 5); $("stkEarR").setAttribute("rx", 14 - turnH * 5); }
+  // --- entrance / exit slides ---------------------------------------------------------------------
+  const slideIn = T.entrance && T.entrance.slide > 0 ? T.entrance.slide : 0, exitS = !!T.exitSlide;
+  const foAt = (tt) => T.fadeOut > 0 ? smooth((T.duration - tt) / T.fadeOut) : (tt < T.duration ? 1 : 0);
+  const slideAt = (tt) => {
+    let y = 0;
+    if (slideIn) { const q = clamp(tt / slideIn, 0, 1); y += 392 * (1 - springOut(0.35 * q + 0.65 * smooth(q), 0.9)); }   // eased in, a little overshoot, settle
+    if (exitS) {
+      let pos = 1 - foAt(tt);
+      for (const s of T.opacity) {
+        if ((s.value ?? 0) !== 0) continue;
+        const uIn = (tt - s.start) / 0.35, uOut = (s.end - tt) / 0.35;
+        if (tt < s.start - 0.01 || tt > s.end + 0.01) continue;
+        const p = Math.min(smooth(uIn), 1 - springOut(1 - clamp(uOut, 0, 1), 0.8));
+        pos = Math.max(pos, p);
+      }
+      y += 120 * pos;
+    }
+    return y;
+  };
+  const slideY = slideAt(t), slideV = slideIn || exitS ? (slideY - slideAt(t - 0.05)) / 0.05 : 0;
+  const drag = clamp(-slideV * 0.012, -6, 6);                       // the head and hands lag behind a moving body
+  const breathH = 0.7 * Math.sin(2 * Math.PI * 0.22 * t);
+  const phr = memo("phr", T.mouth.length ? T.mouth : (T.beats.length ? T.beats : T.talking), () => phraseStarts(T));
+  const phT = phr.length ? phraseTilt(phr, t) : 0, phSign = Math.sign(phT) || 1;
+  const bob = EN * (2.0 * noise(t * 0.9, 0.9, 1.5, 2.4) + talk * 1.3 * ef * Math.sin(2 * Math.PI * 2.1 * t) + syl * 2.6 * efS) + nodW * 3.2 * Math.sin(2 * Math.PI * 1.5 * t) - 1.5 * glance - breathH + Math.min(dip, 4) + drag;
+  const tilt = EN * (1.8 * noise(t * 0.6 + 1, 1, 1.6, 2.7) + talk * 1.2 * ef * Math.sin(2 * Math.PI * 1.7 * t + 1) + talk * phT + phSign * 0.5 * syl * talk * efS) + turnH * -4 + nodW * 1.5 * Math.sin(2 * Math.PI * 1.5 * t) + pose.tilt + headTilt;
+  const headT = `translate(${(turn * 5.5).toFixed(2)},${bob.toFixed(2)}) rotate(${tilt.toFixed(2)} 200 300)`;
+  $("head").setAttribute("transform", headT); if (STICKER) $("stkHead").setAttribute("transform", headT);
+  // secondary motion, only the two short hair strand tips and the earrings: small, deterministic, a pure function of t. They hang
+  // from the head, so they counter-rotate a little against its tilt and keep a gentle wobble of their own.
+  { const wob = (k) => noise(t * 1.35 + k, 1, 1.9, 3.3) * 0.5 + 0.5 * Math.sin(2 * Math.PI * 0.62 * t + k * 2.1);
+    const thL = clamp(-0.0042 * tilt + 0.024 * wob(0.3) * (0.7 + 0.5 * talk), -0.04, 0.04), thR = clamp(-0.0042 * tilt + 0.024 * wob(2.9) * (0.7 + 0.5 * talk), -0.04, 0.04);
+    if (STYLE.hairStyle === "long") {
+      const dL = hairLongD(-thL * 35, thL * -15, -thR * 35, thR * 11);
+      for (const id of ["hlBase", "hlClipP"]) $(id).setAttribute("d", dL);
+      if (STICKER) $("stkHairLong").setAttribute("d", dL);
+      $("hlOut").setAttribute("d", hairLongOuterD(-thL * 35, thL * -15, -thR * 35, thR * 11));
+    }
+    if (STYLE.hairStyle === "men") {   // leo: only the tip of the quiff's front lock sways, at most 1.3 units from rest (head-local), a pure function of t
+      let dx = -0.1 * tilt + 0.95 * wob(0.3) * (0.7 + 0.5 * talk), dy = 0.45 * wob(2.9) * (0.7 + 0.5 * talk);
+      const m = Math.hypot(dx, dy); if (m > 1.25) { dx *= 1.25 / m; dy *= 1.25 / m; }
+      for (const [id, d] of hairMenLock(dx, dy)) $(id).setAttribute("d", d);
+    }
+    if (STYLE.earrings) {
+      const eaL = clamp(-0.5 * tilt + 3.4 * wob(1.1) * (0.7 + 0.5 * talk), -9, 9), eaR = clamp(-0.5 * tilt + 3.4 * wob(4.4) * (0.7 + 0.5 * talk), -9, 9);
+      $("earringL").setAttribute("transform", `rotate(${eaL.toFixed(2)} 120 200)`); $("earringR").setAttribute("transform", `rotate(${eaR.toFixed(2)} 280 200)`);
+    }
+  }
+  const brow = -7 * browUp - 2.2 * syl * efS - 1.5 * talk * ef * Math.max(0, Math.sin(2 * Math.PI * 1.1 * t)) - 2.5 * Math.min(beatBrow, 1) - 4 * flash - 5 * mb;
+  const rotB = mb < 0 ? -mb * 6 : -mb * 2.4;
+  $("browL").setAttribute("transform", `translate(0,${(brow * 1.15).toFixed(2)}) rotate(${rotB.toFixed(2)} 171 142)`);   // a touch asymmetric
+  $("browR").setAttribute("transform", `translate(0,${(brow * 0.85 - 1.5).toFixed(2)}) rotate(${(-rotB).toFixed(2)} 230 135)`);
+  // --- body ---------------------------------------------------------------------------------------
+  const breath = 1 + 0.012 * Math.sin(2 * Math.PI * 0.22 * t);
+  const torsoT = `translate(200,420) skewX(${(-turn * 3).toFixed(2)}) scale(${(1 - 0.012 * Math.abs(turn)).toFixed(4)},${breath.toFixed(4)}) translate(-200,-420)`;
+  $("torso").setAttribute("transform", torsoT); $("collarF").setAttribute("transform", torsoT); if (STICKER) $("stkTorso").setAttribute("transform", torsoT);
+  const sway = 2.5 * (STYLE.energy || 1) * noise(t * 0.35, 1, 1.4, 2.2);
+  $("lean").setAttribute("transform", `translate(${sway.toFixed(2)},0) rotate(${lean.toFixed(2)} 200 420)`);
+  // --- arms ---------------------------------------------------------------------------------------
+  const tsh = turn * 5.7;
+  for (const [nm, arm] of [["L", armL], ["R", armR]]) {
+    // hand parameters: the idle preset, blended toward each active gesture's preset by its weight (weakest first)
+    let hp = pose.u < 1 ? mixP(HP[nm === "L" ? pose.hLb : pose.hRb], HP[nm === "L" ? pose.hL : pose.hR], pose.u) : {...HP[nm === "L" ? pose.hL : pose.hR]};
+    arm.hands.sort((a, b) => a.w - b.w);
+    for (const h of arm.hands) hp = mixP(hp, h.p, clamp(h.w, 0, 1));
+    const S = [arm.S[0] + (arm.sSet ? 0 : tsh), arm.S[1] - Math.min(lift[nm], 8)];
+    setArm(nm, S, fkOffset(S, arm.J, [arm.off[0], arm.off[1] + drag * 1.6]), {hand: hp, aim: arm.kind === "point" ? arm.aim : null, wristW: arm.wrist, thumbW: arm.thumbW, tilt: arm.tilt});
+  }
+  // --- opacity: section fades and step-aside spans -----------------------------------------------
+  const fin = slideIn || !(T.fadeIn > 0) ? 1 : smooth(t / T.fadeIn);
+  let op = Math.min(fin, foAt(t));
+  for (const s of T.opacity) op = Math.min(op, 1 - spanW(s, t, 0.35) * (1 - (s.value ?? 0)));
+  $("all").setAttribute("opacity", op.toFixed(3));
+  if (slideIn || exitS) {   // slides replace the legacy drop-and-scale of the fade (which is kept for the fade-in only)
+    const k = lerp(0.96, 1, fin);
+    $("all").setAttribute("transform", `translate(${(200 * (1 - k)).toFixed(1)},${((1 - fin) * 30 + 420 * (1 - k) + slideY).toFixed(1)}) scale(${k.toFixed(3)})`);
+  } else {
+    $("all").setAttribute("transform", `translate(${(200 * (1 - lerp(0.96, 1, op))).toFixed(1)},${((1 - op) * 30 + 420 * (1 - lerp(0.96, 1, op))).toFixed(1)}) scale(${lerp(0.96, 1, op).toFixed(3)})`);
+  }
+};
+window.__ready = true;
+window.setStyle(window.__style || "leo", window.__ovr);   // builds the per-style shapes (face, neck, shoulders, brows, hands) now that everything exists
+</script>
+</body></html>

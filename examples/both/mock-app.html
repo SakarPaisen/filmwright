@@ -1,0 +1,51 @@
+<!doctype html>
+<!-- A tiny fictional task app, animated, used only to make a sample "recording" for the hybrid example.
+     Run make_sample_clip.py to render it to recordings/inbox.mp4. -->
+<html><head><meta charset="utf-8">
+<style>
+@font-face{font-family:"IBM Plex Sans";src:url("../../src/filmwright/assets/fonts/IBMPlexSans-Regular.ttf");font-weight:400 500}
+@font-face{font-family:"IBM Plex Sans";src:url("../../src/filmwright/assets/fonts/IBMPlexSans-SemiBold.ttf");font-weight:600}
+@font-face{font-family:"IBM Plex Sans";src:url("../../src/filmwright/assets/fonts/IBMPlexSans-Bold.ttf");font-weight:700}
+html,body{margin:0;width:1920px;height:1080px;overflow:hidden;background:#f5f6fb;font-family:"IBM Plex Sans",Arial,sans-serif;color:#1b1f33}
+.side{position:absolute;left:0;top:0;bottom:0;width:300px;background:#141729;color:#c9cbe0;padding:40px 32px;box-sizing:border-box}
+.logo{font-weight:700;letter-spacing:.14em;color:#fff;font-size:26px;margin-bottom:48px}
+.nav div{padding:14px 18px;border-radius:12px;margin-bottom:8px;font-size:22px}
+.nav .on{background:#7c5cff;color:#fff}
+.main{position:absolute;left:300px;right:0;top:0;bottom:0;padding:48px 64px;box-sizing:border-box}
+h1{font-size:44px;margin:0 0 28px}
+.row{display:flex;align-items:center;gap:20px;background:#fff;border-radius:18px;padding:22px 26px;margin-bottom:16px;box-shadow:0 6px 18px rgba(20,23,41,.06);font-size:26px}
+.box{width:30px;height:30px;border-radius:8px;border:3px solid #b9bfd3;box-sizing:border-box;flex:none}
+.tag{margin-left:auto;font-size:19px;font-weight:600;padding:6px 14px;border-radius:999px;background:#ece8ff;color:#5b3fe0}
+.new{position:absolute;right:64px;top:48px;background:#7c5cff;color:#fff;font-weight:700;font-size:24px;padding:16px 28px;border-radius:14px}
+.input{display:flex;align-items:center;gap:16px;background:#fff;border:3px solid #7c5cff;border-radius:18px;padding:20px 26px;font-size:26px;margin-bottom:16px}
+.caret{width:3px;height:32px;background:#7c5cff}
+</style>
+<script src="../../src/filmwright/assets/motion.js"></script>
+</head><body>
+<div class="side"><div class="logo">ACME TASKS</div>
+  <div class="nav"><div class="on">Inbox</div><div>Rota</div><div>Team</div><div>Reports</div></div></div>
+<div class="main">
+  <h1>Inbox</h1><div class="new" id="newbtn">+ New request</div>
+  <div class="input" id="input"><span id="typed"></span><span class="caret"></span></div>
+  <div id="list">
+    <div class="row" id="r0"><div class="box" id="b0"></div>Swap Friday's late shift<span class="tag">Rota</span></div>
+    <div class="row"><div class="box"></div>Order printer paper for the front desk<span class="tag">Office</span></div>
+    <div class="row"><div class="box"></div>Update the holiday calendar<span class="tag">Team</span></div>
+    <div class="row"><div class="box"></div>Book the room for Thursday's review<span class="tag">Meetings</span></div>
+  </div>
+</div>
+<script>
+const tl = motion.timeline({paused: true});
+const text = "Cover the help desk on Saturday morning";
+motion.set("#input", {opacity: 0, y: -20});
+tl.to("#newbtn", {scale: .94, duration: .12, yoyo: true, repeat: 1}, .8);
+tl.to("#input", {opacity: 1, y: 0, duration: .4, ease: "power3.out"}, 1.0);
+const o = {n: 0};
+tl.to(o, {n: text.length, duration: 2.2, ease: "none", onUpdate() { document.getElementById("typed").textContent = text.slice(0, Math.round(o.n)); }}, 1.4);
+tl.to("#b0", {backgroundColor: "#22c55e", borderColor: "#22c55e", duration: .2}, 4.6);
+tl.to("#r0", {opacity: .55, duration: .4}, 4.8);
+tl.set({}, {}, 8);
+tl.seek(0);
+window.TOTAL = 8; window.SFX = []; window.renderAt = t => { tl.seek(t); }; window.READY = true;
+</script>
+</body></html>

@@ -1,0 +1,440 @@
+<!doctype html>
+<!-- filmwright feature montage (MIT). Many features of one product in about a minute.
+     Inputs: window.MC (montage config: brand, headline, features[], cta, footnote), window.BEATS (intro, one per
+     feature, close), window.ASPECT ("16x9" | "9x16" | "1x1"). Output: window.TOTAL, window.SFX, window.renderAt, window.READY. -->
+<html><head><meta charset="utf-8">
+<style>
+@font-face{font-family:"Space Grotesk";src:url("../../assets/fonts/SpaceGrotesk-Variable.ttf") format("truetype");font-weight:300 700}
+@font-face{font-family:"IBM Plex Sans";src:url("../../assets/fonts/IBMPlexSans-Regular.ttf") format("truetype");font-weight:400 500}
+@font-face{font-family:"IBM Plex Sans";src:url("../../assets/fonts/IBMPlexSans-SemiBold.ttf") format("truetype");font-weight:600}
+@font-face{font-family:"IBM Plex Sans";src:url("../../assets/fonts/IBMPlexSans-Bold.ttf") format("truetype");font-weight:700}
+@font-face{font-family:"Caveat";src:url("../../assets/fonts/Caveat-Variable.ttf") format("truetype");font-weight:400 700}
+html,body{margin:0;padding:0;overflow:hidden;background:#0f1222}svg{display:block}
+</style>
+<script src="../../assets/motion.js"></script>
+</head><body>
+<svg id="root" width="1920" height="1080" viewBox="0 0 1920 1080" xmlns="http://www.w3.org/2000/svg">
+<defs>
+  <radialGradient id="glow" cx=".5" cy=".5" r=".5"><stop offset="0" class="acc" stop-opacity=".55"/><stop offset=".55" class="acc" stop-opacity=".15"/><stop offset="1" class="acc" stop-opacity="0"/></radialGradient>
+  <radialGradient id="darkglow" cx=".5" cy=".45" r=".75"><stop offset="0" id="dg0"/><stop offset=".6" id="dg1"/><stop offset="1" id="dg2"/></radialGradient>
+  <filter id="soft" x="-20%" y="-20%" width="140%" height="160%"><feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#10132a" flood-opacity=".18"/></filter>
+  <filter id="softdark" x="-20%" y="-20%" width="140%" height="160%"><feDropShadow dx="0" dy="14" stdDeviation="18" flood-color="#000" flood-opacity=".45"/></filter>
+  <filter id="neon" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  <pattern id="dots" width="40" height="40" patternUnits="userSpaceOnUse"><circle id="dotc" cx="2" cy="2" r="1.6" opacity=".55"/></pattern>
+  <clipPath id="stageclip"><rect x="60" y="110" width="1040" height="860" rx="36"/></clipPath>
+</defs>
+<rect id="bg1" width="1920" height="1080" fill="url(#darkglow)"/>
+<rect id="bg2" width="1920" height="1080" fill="url(#dots)" opacity=".6"/>
+<g id="scenes"></g>
+<g id="fx"></g>
+</svg>
+<script>
+/* ---------- helpers ---------- */
+const NS = "http://www.w3.org/2000/svg", $ = id => document.getElementById(id);
+function S(tag, a = {}, p = null, txt = null) { const e = document.createElementNS(NS, tag); for (const [k, v] of Object.entries(a)) e.setAttribute(k, v); if (txt != null) e.textContent = txt; if (p) p.appendChild(e); return e; }
+let seed = 11; const rnd = () => (seed = seed * 16807 % 2147483647, (seed - 1) / 2147483646);
+const hex = h => { h = h.replace("#", ""); if (h.length === 3) h = h.split("").map(c => c + c).join(""); return [0, 2, 4].map(i => parseInt(h.slice(i, i + 2), 16)); };
+const mix = (a, b, k) => { const x = hex(a), y = hex(b); return "#" + x.map((v, i) => Math.round(v + (y[i] - v) * k).toString(16).padStart(2, "0")).join(""); };
+const MC = window.MC || {};
+const BR = Object.assign({wordmark: "ACME TASKS", tagline: "Plan less. Do more.", colors: {}}, MC.brand || {});
+const BC = Object.assign({bg: "#0f1222", accent: "#7c5cff", alt: "#22c55e", warm: "#ff8a4c", ink: "#f4f5fb"}, BR.colors || {});
+const C = {bg: BC.bg, panel: mix(BC.bg, "#ffffff", .05), panel2: mix(BC.bg, "#ffffff", .09), line: mix(BC.bg, BC.accent, .3),
+  accent: BC.accent, accent2: mix(BC.accent, "#ffffff", .28), soft: mix(BC.accent, "#ffffff", .75), alt: BC.alt, warm: BC.warm,
+  sun: "#FFC247", coral: "#FF6B5B", red: "#E5484D", text: BC.ink, muted: mix(BC.ink, BC.bg, .38), dark: "#141729", ink: "#1F2533",
+  skin: "#C98B6B", skin2: "#B4785A", hair: "#2A1A16"};
+const PALETTE = [C.accent, C.alt, C.warm, "#3BA7FF", "#E35DA8", C.sun, "#14B8A6", C.coral];
+const F = {disp: "Space Grotesk, Arial, sans-serif", body: "IBM Plex Sans, Arial, sans-serif", hand: "Caveat, cursive"};
+document.querySelectorAll(".acc").forEach(s => s.setAttribute("stop-color", C.accent));
+$("dg0").setAttribute("stop-color", mix(BC.bg, BC.accent, .3)); $("dg1").setAttribute("stop-color", mix(BC.bg, BC.accent, .08)); $("dg2").setAttribute("stop-color", mix(BC.bg, "#000000", .25));
+$("dotc").setAttribute("fill", mix(BC.bg, BC.accent, .45));
+const FEATURES = (MC.features && MC.features.length ? MC.features : [
+  {key: "f1", title: "Fair rotas in seconds", art: "calendar", points: ["Availability collected for you", "Weekends shared fairly", "Swaps agreed in one tap"]},
+  {key: "f2", title: "Requests in one inbox", art: "chat", points: ["Chat, email and forms together", "Every request has an owner", "Nothing slips through"]},
+  {key: "f3", title: "Progress at a glance", art: "chart", points: ["Live team dashboard", "Spot overload early", "Weekly summary, written for you"]}]).map((f, i) => Object.assign({color: PALETTE[i % PALETTE.length]}, f));
+const SFX = []; const cue = (t, n) => SFX.push([+t.toFixed(3), n]);
+const BEATS = window.BEATS || (() => { const keys = ["intro", ...FEATURES.map(f => f.key), "close"]; let t = .5; return keys.map(key => { const b = {key, start: t, dur: 5}; t += 5.4; return b; }); })();
+const B = Object.fromEntries(BEATS.map(b => [b.key, b]));
+const CLOSE_HOLD = Math.max(B.close.dur, 6.4);
+const TOTAL = B.close.start + CLOSE_HOLD + 2.2;
+const tl = motion.timeline({paused: true});
+const Q = t => Math.round(t / .25) * .25;   // the music's eighth-note grid (120 BPM)
+const scenes = $("scenes");
+const scene = id => { const outer = S("g", {class: "layout", "data-scene": id}, scenes); const g = S("g", {id}, outer); motion.set(g, {opacity: 0}); return g; };
+function loop(target, vars, start, end, period) { const n = Math.max(0, Math.floor((end - start) / period) - 1); tl.to(target, {...vars, duration: period / 2, ease: "sine.inOut", yoyo: true, repeat: n * 2 + 1}, start); }
+
+/* ---------- logo mark (brand image or monogram tile) ---------- */
+function logoMark(parent, cx, cy, s, glow = true) {
+  const g = S("g", {transform: `translate(${cx},${cy}) scale(${s})`}, parent);
+  const tile = S("path", {d: "M-70 -110 H70 Q110 -110 110 -70 V70 Q110 110 70 110 H-70 Q-110 110 -110 70 V-70 Q-110 -110 -70 -110 Z", stroke: C.accent2, "stroke-width": 16, fill: "none"}, g);
+  const nodes = [];
+  if (BR.logo) nodes.push(S("image", {href: BR.logo, x: -86, y: -86, width: 172, height: 172, preserveAspectRatio: "xMidYMid meet"}, g));
+  else nodes.push(S("text", {x: 0, y: 46, "text-anchor": "middle", "font-family": F.disp, "font-weight": 700, "font-size": 140, fill: "#FFFFFF"}, g, (BR.monogram || BR.wordmark || "A").trim()[0]));
+  const pin = S("circle", {cx: 104, cy: -104, r: 24, fill: C.alt, stroke: C.bg, "stroke-width": 8}, g);
+  if (glow) g.setAttribute("filter", "url(#neon)");
+  return {g, parts: [tile], nodes, pin};
+}
+function drawLogo(m, t, dur = .6) {
+  m.parts.forEach(p => { const L = p.getTotalLength(); motion.set(p, {strokeDasharray: L, strokeDashoffset: L}); tl.to(p, {strokeDashoffset: 0, duration: dur, ease: "power2.out"}, t); });
+  motion.set([...m.nodes, m.pin], {scale: 0, transformOrigin: "center"}); tl.to([...m.nodes, m.pin], {scale: 1, duration: .38, ease: "back.out(3)", stagger: .08}, t + .35);
+}
+/* ---------- a flat character (head centre at 0,0 before transform) ---------- */
+function person(parent, x, y, s, o = {}) {
+  const sk = o.skin || C.skin, sk2 = o.skin2 || C.skin2, hc = o.hair || C.hair, sh = o.shirt || C.accent, sh2 = o.shirt2 || mix(sh, "#000000", .18);
+  const g = S("g", {transform: `translate(${x},${y}) scale(${s})`}, parent);
+  const body = S("g", {}, g);
+  S("path", {d: "M-140 300 C-140 168 -110 116 0 104 C110 116 140 168 140 300 Z", fill: sh}, body);
+  S("path", {d: "M0 104 C110 116 140 168 140 300 L50 300 C70 200 50 136 0 104 Z", fill: sh2}, body);
+  S("rect", {x: -22, y: 56, width: 44, height: 54, rx: 14, fill: sk2}, body);
+  const head = S("g", {}, g);
+  const st = o.style || "short";
+  if (st === "bun") { S("ellipse", {cx: 0, cy: -36, rx: 96, ry: 90, fill: hc}, head); S("circle", {cx: 0, cy: -128, r: 44, fill: hc}, head); }
+  if (st === "long") S("path", {d: "M-100 -20 C-110 -120 110 -120 100 -20 L104 140 C60 160 -60 160 -104 140 Z", fill: hc}, head);
+  if (st === "short") S("ellipse", {cx: 0, cy: -34, rx: 88, ry: 78, fill: hc}, head);
+  if (st === "curly") for (const [cx, cy, r] of [[-60, -70, 40], [0, -96, 46], [60, -70, 40], [-86, -20, 32], [86, -20, 32], [-34, -100, 34], [34, -100, 34]]) S("circle", {cx, cy, r, fill: hc}, head);
+  S("circle", {cx: -76, cy: 10, r: 15, fill: sk2}, head); S("circle", {cx: 76, cy: 10, r: 15, fill: sk2}, head);
+  S("ellipse", {cx: 0, cy: 0, rx: 78, ry: 88, fill: sk}, head);
+  if (st === "bun" || st === "long") S("path", {d: "M-80 -28 C-66 -96 30 -114 82 -48 C48 -60 2 -60 -30 -32 C-46 -18 -68 -16 -80 -28 Z", fill: hc}, head);
+  if (st === "short") S("path", {d: "M-82 -20 C-80 -90 80 -100 84 -24 C60 -54 -20 -66 -82 -20 Z", fill: hc}, head);
+  if (st === "curly") S("path", {d: "M-74 -30 C-60 -70 60 -70 74 -30 C40 -46 -40 -46 -74 -30 Z", fill: hc}, head);
+  S("circle", {cx: -34, cy: 42, r: 13, fill: "#E8907C", opacity: .45}, head); S("circle", {cx: 34, cy: 42, r: 13, fill: "#E8907C", opacity: .45}, head);
+  const eyes = S("g", {}, head);
+  for (const ex of [-30, 30]) { S("ellipse", {cx: ex, cy: 10, rx: 8.5, ry: 11, fill: "#1A1A24"}, eyes); S("circle", {cx: ex + 3, cy: 6, r: 2.6, fill: "#FFFFFF"}, eyes); }
+  motion.set(eyes, {svgOrigin: "0 10"});
+  if (o.glasses) for (const ex of [-30, 30]) S("circle", {cx: ex, cy: 10, r: 22, fill: "none", stroke: C.ink, "stroke-width": 5}, head);
+  S("path", {d: "M-2 22 Q-6 34 2 36", stroke: "#A2664B", "stroke-width": 4, "stroke-linecap": "round", fill: "none"}, head);
+  S("path", {d: "M-26 54 Q0 78 26 54", stroke: "#7A2E2E", "stroke-width": 5.5, "stroke-linecap": "round", fill: "none"}, head);
+  motion.set(head, {svgOrigin: "0 100"});
+  return {g, head, eyes, body};
+}
+function blink(eyes, times) { for (const t of times) tl.to(eyes, {scaleY: .1, duration: .07, yoyo: true, repeat: 1}, t); }
+
+/* ---------- feature scene frame: stage on the left, title and points on the right ---------- */
+function stage(g, fill) {
+  const wrap = S("g", {class: "stagewrap"}, g);
+  const st = S("g", {class: "stage", "clip-path": "url(#stageclip)"}, wrap);
+  S("rect", {x: 60, y: 110, width: 1040, height: 860, fill}, st);
+  return st;
+}
+function sceneWindow(g, b, next) {
+  const st = g.querySelector(".stage");
+  tl.set(g, {opacity: 1}, b.start - .35);
+  tl.fromTo(st, {scaleX: 0, svgOrigin: "580 540"}, {scaleX: 1, duration: .45, ease: "power3.out"}, b.start - .35); cue(b.start - .35, "whoosh");
+  const end = next.start - .35;
+  tl.to(g, {opacity: 0, duration: .3, ease: "power2.in"}, end - .05);
+  tl.to(st, {scaleX: 0, duration: .3, ease: "power3.in"}, end - .05);
+  return end;
+}
+function column(g, f, i, b) {
+  const X = 1150, col = S("g", {class: "colwrap"}, g), n = FEATURES.length;
+  const hdr = S("g", {}, col);
+  S("rect", {x: X, y: 120, width: 720, height: 84, rx: 42, fill: C.panel, stroke: C.line, "stroke-width": 2}, hdr);
+  S("circle", {cx: X + 42, cy: 162, r: 24, fill: f.color}, hdr);
+  S("text", {x: X + 84, y: 172, "font-family": F.disp, "font-weight": 700, "font-size": 30, fill: "#FFFFFF"}, hdr, f.label || "Feature");
+  S("text", {x: X + 690, y: 171, "text-anchor": "end", "font-family": F.disp, "font-weight": 600, "font-size": 24, fill: C.muted}, hdr, `${String(i + 1).padStart(2, "0")} / ${String(n).padStart(2, "0")}`);
+  motion.set(hdr, {x: 80, opacity: 0});
+  tl.to(hdr, {x: 0, opacity: 1, duration: .45, ease: "power3.out"}, b.start - .1);
+  const title = S("text", {x: X, y: 300, "font-family": F.disp, "font-weight": 700, "font-size": 58, fill: "#FFFFFF"}, col, f.title);
+  if (title.getComputedTextLength() > 720) { title.setAttribute("textLength", 720); title.setAttribute("lengthAdjust", "spacingAndGlyphs"); }
+  motion.set(title, {opacity: 0, y: 30});
+  tl.to(title, {opacity: 1, y: 0, duration: .5, ease: "power3.out"}, Q(b.start + .1));
+  const pts = (f.points || []).slice(0, 3), span = Math.max(.7, (b.dur - .9) / Math.max(1, pts.length));
+  pts.forEach((p, k) => {
+    const y = 360 + k * 180, t0 = Q(b.start + .6 + k * span), c = S("g", {}, col);
+    S("rect", {x: X, y, width: 720, height: 150, rx: 26, fill: "#F6F7FC", filter: "url(#softdark)"}, c);
+    S("rect", {x: X, y, width: 12, height: 150, rx: 6, fill: f.color}, c);
+    const tick = S("g", {}, c);
+    S("circle", {cx: X + 66, cy: y + 75, r: 26, fill: f.color}, tick);
+    S("path", {d: `M${X + 54} ${y + 75} L${X + 63} ${y + 85} L${X + 80} ${y + 64}`, stroke: "#FFFFFF", "stroke-width": 6, fill: "none", "stroke-linecap": "round", "stroke-linejoin": "round"}, tick);
+    const tx = S("text", {x: X + 116, y: y + 86, "font-family": F.body, "font-weight": 600, "font-size": 30, fill: C.dark}, c, p);
+    if (tx.getComputedTextLength() > 570) { tx.setAttribute("textLength", 570); tx.setAttribute("lengthAdjust", "spacingAndGlyphs"); }
+    motion.set(c, {x: 760, opacity: 0, rotation: 3, svgOrigin: `${X + 360} ${y + 75}`}); motion.set(tick, {scale: 0, svgOrigin: `${X + 66} ${y + 75}`});
+    tl.to(c, {x: 0, opacity: 1, rotation: 0, duration: .5, ease: "power3.out"}, t0); cue(t0, "swish");
+    tl.to(tick, {scale: 1, duration: .3, ease: "back.out(3)"}, t0 + .5); cue(t0 + .5, "pop");
+  });
+}
+
+/* ---------- stage art: each one a small animated world, all generic ---------- */
+const ART = {
+  calendar(st, f, t0, t1) {
+    const x0 = 160, y0 = 230, cw = 120, rh = 110, days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+    S("rect", {x: 120, y: 180, width: 920, height: 700, rx: 28, fill: "#FFFFFF", filter: "url(#soft)"}, st);
+    days.forEach((d, i) => S("text", {x: x0 + i * cw + 50, y: y0 + 20, "text-anchor": "middle", "font-family": F.body, "font-weight": 700, "font-size": 24, fill: "#6A7190"}, st, d));
+    for (let r = 0; r < 5; r++) for (let c = 0; c < 7; c++) S("rect", {x: x0 + c * cw, y: y0 + 50 + r * rh, width: cw - 16, height: rh - 16, rx: 12, fill: "#F1F2F8"}, st);
+    const cols = [f.color, mix(f.color, "#ffffff", .35), C.alt, C.warm];
+    let k = 0;
+    for (let r = 0; r < 5; r++) for (let c = 0; c < 7; c++) {
+      if (rnd() < .45) continue;
+      const blk = S("rect", {x: x0 + c * cw + 8, y: y0 + 58 + r * rh, width: cw - 32, height: rh - 32, rx: 10, fill: cols[(r + c) % 4]}, st);
+      motion.set(blk, {scale: 0, svgOrigin: `${x0 + c * cw + cw / 2 - 8} ${y0 + 50 + r * rh + rh / 2 - 8}`});
+      tl.to(blk, {scale: 1, duration: .3, ease: "back.out(2.4)"}, t0 + .3 + (k++) * .05);
+    }
+    const hl = S("rect", {x: x0 - 8, y: y0 + 42, width: cw, height: 5 * rh, rx: 16, fill: "none", stroke: f.color, "stroke-width": 6}, st);
+    motion.set(hl, {opacity: 0});
+    tl.to(hl, {opacity: 1, duration: .2}, t0 + 1.8);
+    tl.to(hl, {x: 6 * cw, duration: Math.max(1, t1 - t0 - 2.4), ease: "power1.inOut"}, t0 + 2);
+  },
+  chat(st, f, t0, t1) {
+    S("rect", {x: 300, y: 160, width: 560, height: 760, rx: 48, fill: "#1E2338"}, st);
+    S("rect", {x: 320, y: 200, width: 520, height: 690, rx: 30, fill: "#F5F6FC"}, st);
+    const lines = [[0, 300], [1, 240], [0, 360], [1, 200], [0, 280]];
+    let y = 250;
+    lines.forEach(([me, w], i) => {
+      const x = me ? 820 - w : 340, b = S("g", {}, st);
+      S("rect", {x, y, width: w, height: 74, rx: 26, fill: me ? f.color : "#FFFFFF", stroke: me ? "none" : "#DCE0EE", "stroke-width": 2}, b);
+      S("rect", {x: x + 24, y: y + 24, width: w - 70, height: 9, rx: 4.5, fill: me ? "#FFFFFF" : "#CDD3E4", opacity: .9}, b);
+      S("rect", {x: x + 24, y: y + 42, width: (w - 70) * .6, height: 9, rx: 4.5, fill: me ? "#FFFFFF" : "#CDD3E4", opacity: .6}, b);
+      motion.set(b, {opacity: 0, y: 30, scale: .9, svgOrigin: `${x + w / 2} ${y + 37}`});
+      const t = Q(t0 + .3 + i * Math.max(.45, (t1 - t0 - 1) / lines.length));
+      tl.to(b, {opacity: 1, y: 0, scale: 1, duration: .35, ease: "back.out(1.8)"}, t); cue(t, "pop");
+      y += 110;
+    });
+    const typing = S("g", {}, st);
+    S("rect", {x: 340, y: 820, width: 110, height: 50, rx: 25, fill: "#FFFFFF", stroke: "#DCE0EE", "stroke-width": 2}, typing);
+    const dots = [0, 1, 2].map(k => S("circle", {cx: 372 + k * 22, cy: 845, r: 6, fill: "#A6ADC6"}, typing));
+    dots.forEach((d, k) => loop(d, {y: -7}, t0 + .2 + k * .1, t1, .5));
+  },
+  chart(st, f, t0, t1) {
+    S("rect", {x: 120, y: 180, width: 920, height: 700, rx: 28, fill: "#FFFFFF", filter: "url(#soft)"}, st);
+    [["This week", 128], ["On time", 96], ["Saved", 14]].forEach(([l, v], i) => {
+      const x = 160 + i * 290;
+      S("rect", {x, y: 220, width: 260, height: 130, rx: 18, fill: "#F1F2F8"}, st);
+      S("text", {x: x + 22, y: 260, "font-family": F.body, "font-weight": 600, "font-size": 21, fill: "#6A7190"}, st, l);
+      const n = S("text", {x: x + 22, y: 322, "font-family": F.disp, "font-weight": 700, "font-size": 50, fill: C.dark}, st, "0");
+      const o = {v: 0};
+      tl.to(o, {v, duration: 1.4, ease: "power2.out", onUpdate() { n.textContent = Math.round(o.v); }}, t0 + .3 + i * .15);
+    });
+    const vals = [.3, .42, .38, .55, .5, .68, .74, .7, .86, .95];
+    vals.forEach((v, k) => {
+      const x = 180 + k * 82, h = v * 400, bar = S("rect", {x, y: 840 - h, width: 52, height: h, rx: 10, fill: k === vals.length - 1 ? C.alt : mix(f.color, "#ffffff", .3)}, st);
+      motion.set(bar, {scaleY: 0, svgOrigin: `${x + 26} 840`});
+      tl.to(bar, {scaleY: 1, duration: .5, ease: "back.out(1.6)"}, t0 + .8 + k * .08);
+    });
+    const pts = vals.map((v, k) => [206 + k * 82, 840 - v * 400 - 36]);
+    const line = S("path", {d: "M" + pts.map(p => p.join(" ")).join(" L"), stroke: C.warm, "stroke-width": 7, fill: "none", "stroke-linecap": "round", "stroke-linejoin": "round"}, st);
+    const L = line.getTotalLength(); motion.set(line, {strokeDasharray: L, strokeDashoffset: L});
+    tl.to(line, {strokeDashoffset: 0, duration: 1.4, ease: "power2.inOut"}, t0 + 1.2);
+  },
+  checklist(st, f, t0, t1) {
+    S("rect", {x: 200, y: 180, width: 760, height: 700, rx: 28, fill: "#FFFFFF", filter: "url(#soft)"}, st);
+    const n = 5, per = Math.max(.35, (t1 - t0 - 1.2) / n);
+    for (let i = 0; i < n; i++) {
+      const y = 240 + i * 124;
+      S("rect", {x: 240, y, width: 680, height: 96, rx: 18, fill: "#F1F2F8"}, st);
+      const box = S("rect", {x: 268, y: y + 28, width: 40, height: 40, rx: 10, fill: "#FFFFFF", stroke: "#B9BFD3", "stroke-width": 3}, st);
+      const tick = S("path", {d: `M278 ${y + 48} L286 ${y + 57} L300 ${y + 39}`, stroke: "#FFFFFF", "stroke-width": 5, fill: "none", "stroke-linecap": "round", "stroke-linejoin": "round"}, st);
+      S("rect", {x: 336, y: y + 34, width: 380 - (i % 3) * 70, height: 12, rx: 6, fill: "#CDD3E4"}, st);
+      S("rect", {x: 336, y: y + 56, width: 220 - (i % 2) * 60, height: 10, rx: 5, fill: "#DDE1EE"}, st);
+      const TL = tick.getTotalLength(); motion.set(tick, {strokeDasharray: TL, strokeDashoffset: TL});
+      const t = Q(t0 + .5 + i * per);
+      tl.to(box, {attr: {fill: f.color, stroke: f.color}, duration: .15}, t);
+      tl.to(tick, {strokeDashoffset: 0, duration: .25}, t + .05); cue(t, "tick");
+    }
+  },
+  bell(st, f, t0, t1) {
+    const bell = S("g", {}, st);
+    S("path", {d: "M520 330 Q520 220 580 220 Q640 220 640 330 L660 420 L500 420 Z", fill: C.sun}, bell);
+    S("circle", {cx: 580, cy: 440, r: 20, fill: C.sun}, bell); S("rect", {x: 570, y: 196, width: 20, height: 30, rx: 8, fill: C.sun}, bell);
+    loop(bell, {rotation: 9, svgOrigin: "580 210"}, t0 + .2, t0 + 1.8, .3);
+    for (let i = 0; i < 3; i++) {
+      const y = 520 + i * 130, c = S("g", {}, st);
+      S("rect", {x: 250, y, width: 660, height: 106, rx: 22, fill: "#FFFFFF", filter: "url(#soft)"}, c);
+      S("circle", {cx: 300, cy: y + 53, r: 24, fill: [f.color, C.alt, C.warm][i]}, c);
+      S("rect", {x: 344, y: y + 34, width: 360 - i * 40, height: 12, rx: 6, fill: "#CDD3E4"}, c);
+      S("rect", {x: 344, y: y + 58, width: 230, height: 10, rx: 5, fill: "#DDE1EE"}, c);
+      motion.set(c, {opacity: 0, x: 300});
+      const t = Q(t0 + .6 + i * .55);
+      tl.to(c, {opacity: 1, x: 0, duration: .45, ease: "power3.out"}, t); cue(t, "pop");
+    }
+  },
+  people(st, f, t0, t1) {
+    const spots = [[300, 360, "bun", "#C98B6B", C.accent], [580, 300, "short", "#7A4E35", C.alt], [860, 360, "curly", "#E8C2A0", C.warm], [440, 640, "long", "#B8775A", "#3BA7FF"], [720, 640, "short", "#E0B48F", "#E35DA8"]];
+    const ps = spots.map(([x, y]) => [x, y]);
+    const links = S("g", {}, st);
+    [[0, 1], [1, 2], [0, 3], [1, 3], [1, 4], [2, 4], [3, 4]].forEach(([a, b], i) => {
+      const l = S("line", {x1: ps[a][0], y1: ps[a][1], x2: ps[b][0], y2: ps[b][1], stroke: mix(f.color, "#ffffff", .3), "stroke-width": 6, "stroke-linecap": "round"}, links);
+      const L = Math.hypot(ps[b][0] - ps[a][0], ps[b][1] - ps[a][1]); motion.set(l, {strokeDasharray: L, strokeDashoffset: L});
+      tl.to(l, {strokeDashoffset: 0, duration: .4, ease: "power2.out"}, t0 + 1.2 + i * .12);
+    });
+    spots.forEach(([x, y, style, skin, shirt], i) => {
+      const r = S("g", {}, st);
+      S("circle", {cx: x, cy: y, r: 92, fill: "#FFFFFF"}, r);
+      const clip = S("clipPath", {id: "pc" + i + Math.round(rnd() * 1e6)}, document.querySelector("defs")); S("circle", {cx: x, cy: y, r: 88}, clip);
+      const holder = S("g", {"clip-path": `url(#${clip.id})`}, r);
+      const p = person(holder, x, y - 6, .42, {style, skin, skin2: mix(skin, "#000000", .12), shirt});
+      blink(p.eyes, [t0 + 1 + i * .3, t0 + 3 + i * .2]);
+      motion.set(r, {scale: 0, svgOrigin: `${x} ${y}`});
+      tl.to(r, {scale: 1, duration: .45, ease: "back.out(2.2)"}, Q(t0 + .3 + i * .15)); cue(Q(t0 + .3 + i * .15), "pop");
+    });
+  },
+  flow(st, f, t0, t1) {
+    const nodes = [[220, 540], [460, 330], [460, 750], [720, 540], [940, 540]];
+    const edges = [[0, 1], [0, 2], [1, 3], [2, 3], [3, 4]];
+    const paths = edges.map(([a, b], i) => {
+      const [x1, y1] = nodes[a], [x2, y2] = nodes[b];
+      const p = S("path", {d: `M${x1} ${y1} C${(x1 + x2) / 2} ${y1} ${(x1 + x2) / 2} ${y2} ${x2} ${y2}`, stroke: mix(f.color, "#ffffff", .4), "stroke-width": 6, fill: "none"}, st);
+      const L = p.getTotalLength(); motion.set(p, {strokeDasharray: L, strokeDashoffset: L});
+      tl.to(p, {strokeDashoffset: 0, duration: .4}, t0 + .6 + i * .12);
+      return p;
+    });
+    nodes.forEach(([x, y], i) => {
+      const n = S("g", {}, st);
+      S("rect", {x: x - 70, y: y - 50, width: 140, height: 100, rx: 22, fill: i === 4 ? C.alt : "#FFFFFF", filter: "url(#soft)"}, n);
+      S("rect", {x: x - 40, y: y - 10, width: 80, height: 12, rx: 6, fill: i === 4 ? "#FFFFFF" : mix(f.color, "#ffffff", .2)}, n);
+      motion.set(n, {scale: 0, svgOrigin: `${x} ${y}`});
+      tl.to(n, {scale: 1, duration: .35, ease: "back.out(2.4)"}, Q(t0 + .2 + i * .12));
+    });
+    for (let k = 0; k < 6; k++) {
+      const p = paths[k % paths.length], L = p.getTotalLength(), dot = S("circle", {r: 11, fill: C.warm, opacity: 0}, st), o = {k: 0};
+      const t = t0 + 1.6 + k * .35;
+      tl.set(dot, {opacity: 1}, t);
+      tl.to(o, {k: 1, duration: .7, ease: "power1.inOut", onUpdate() { const pt = p.getPointAtLength(L * o.k); dot.setAttribute("cx", pt.x); dot.setAttribute("cy", pt.y); }}, t);
+      tl.set(dot, {opacity: 0}, t + .72);
+    }
+  },
+  lock(st, f, t0, t1) {
+    const sh = S("path", {d: "M580 200 L800 280 L800 500 Q800 720 580 820 Q360 720 360 500 L360 280 Z", fill: mix(f.color, "#ffffff", .15)}, st);
+    motion.set(sh, {scale: 0, svgOrigin: "580 510"});
+    tl.to(sh, {scale: 1, duration: .6, ease: "back.out(1.8)"}, t0 + .2); cue(t0 + .2, "pop");
+    const body = S("rect", {x: 490, y: 470, width: 180, height: 150, rx: 22, fill: "#FFFFFF"}, st);
+    const shackle = S("path", {d: "M520 470 L520 410 Q520 350 580 350 Q640 350 640 410 L640 470", stroke: "#FFFFFF", "stroke-width": 26, fill: "none", "stroke-linecap": "round"}, st);
+    S("circle", {cx: 580, cy: 535, r: 18, fill: f.color}, st);
+    motion.set(shackle, {y: -50});
+    tl.to(shackle, {y: 0, duration: .35, ease: "bounce.out"}, t0 + 1.4); cue(t0 + 1.5, "tick");
+    void body;
+    for (let i = 0; i < 10; i++) {
+      const a = i / 10 * Math.PI * 2, r = 330, d = S("circle", {cx: 580 + Math.cos(a) * r, cy: 510 + Math.sin(a) * r, r: 8, fill: mix(f.color, "#ffffff", .5), opacity: .8}, st);
+      loop(d, {scale: 1.6, svgOrigin: `${580 + Math.cos(a) * r} ${510 + Math.sin(a) * r}`}, t0 + .5 + i * .08, t1, .9);
+    }
+  },
+};
+
+/* ================= INTRO: a busy team, then the headline ================= */
+function sceneIntro() {
+  const g = scene("s-intro"), b = B.intro;
+  tl.set(g, {opacity: 1}, 0);
+  const people = [[560, 520, "bun", "#C98B6B", C.accent], [960, 470, "short", "#7A4E35", C.alt], [1360, 520, "curly", "#E8C2A0", C.warm]];
+  const crowd = S("g", {}, g);
+  people.forEach(([x, y, style, skin, shirt], i) => {
+    const p = person(crowd, x, y, .9, {style, skin, skin2: mix(skin, "#000000", .12), shirt});
+    motion.set(p.g, {opacity: 0, y: 40});
+    tl.to(p.g, {opacity: 1, y: 0, duration: .6, ease: "back.out(1.6)"}, .1 + i * .15);
+    blink(p.eyes, [1.2 + i * .4, 3.1 + i * .3]);
+    tl.to(p.head, {rotation: i === 1 ? 4 : -4, duration: .5, ease: "sine.inOut", yoyo: true, repeat: 1}, 1.4 + i * .3);
+  });
+  // requests pile up above their heads
+  const kinds = [["#FFE08A", 0], ["#FFC9B5", 1], ["#C8F0D8", 2], ["#D9D2FF", 3]];
+  for (let i = 0; i < 18; i++) {
+    const [col] = kinds[i % 4], x = 300 + rnd() * 1320, y = 150 + rnd() * 160, n = S("g", {}, crowd);
+    S("rect", {x: x - 40, y: y - 30, width: 80, height: 60, rx: 10, fill: col}, n);
+    S("rect", {x: x - 26, y: y - 12, width: 52, height: 7, rx: 3.5, fill: mix(col, "#000000", .2)}, n);
+    S("rect", {x: x - 26, y: y + 4, width: 34, height: 7, rx: 3.5, fill: mix(col, "#000000", .2)}, n);
+    motion.set(n, {scale: 0, rotation: (rnd() - .5) * 30, svgOrigin: `${x} ${y}`});
+    const t = Q(.6 + i * Math.max(.08, (b.dur * .55) / 18));
+    tl.to(n, {scale: 1, duration: .3, ease: "back.out(2.6)"}, t);
+    if (i % 3 === 0) cue(t, "pop");
+  }
+  // the headline takes over
+  const head = S("g", {}, g);
+  const mk = logoMark(head, 960, 380, .7);
+  const words = String(MC.headline || `Meet ${BR.wordmark}`).split(" ");
+  const line = S("text", {x: 960, y: 640, "text-anchor": "middle", "font-family": F.disp, "font-weight": 700, "font-size": 72, fill: "#FFFFFF"}, head);
+  const sp = words.map((w, i) => S("tspan", {}, line, (i ? " " : "") + w));
+  if (line.getComputedTextLength() > 1640) { line.setAttribute("textLength", 1640); line.setAttribute("lengthAdjust", "spacingAndGlyphs"); }
+  const th = Q(b.start + b.dur * .62);
+  tl.to(crowd, {opacity: 0, scale: .9, svgOrigin: "960 600", duration: .4, ease: "power2.in"}, th - .4); cue(th - .4, "whoosh");
+  motion.set(head, {opacity: 0});
+  tl.set(head, {opacity: 1}, th);
+  drawLogo(mk, th);
+  motion.set(sp, {opacity: 0});
+  sp.forEach((s, i) => tl.to(s, {opacity: 1, duration: .15}, th + .5 + i * .08));
+  tl.to(g, {opacity: 0, duration: .3}, BEATS[1].start - .4);
+}
+
+/* ================= FEATURES ================= */
+function sceneFeature(f, i) {
+  const g = scene("s-" + f.key), b = B[f.key], next = BEATS[BEATS.indexOf(b) + 1];
+  const st = stage(g, ["#F3F1FF", "#ECFAF4", "#FFF4EC", "#EEF6FF", "#FDEFF6", "#FFF8E6", "#E9FBF8", "#FFF1EC"][i % 8]);
+  sceneWindow(g, b, next);
+  (ART[f.art] || ART.checklist)(st, f, b.start, next.start - .4);
+  column(g, f, i, b);
+}
+
+/* ================= CLOSE: features fly into the mark, lockup ================= */
+function sceneClose() {
+  const g = scene("s-close"), b = B.close, s = b.start;
+  tl.set(g, {opacity: 1}, s - .3);
+  const core = S("g", {}, g);
+  S("circle", {cx: 960, cy: 430, r: 300, fill: "url(#glow)"}, core);
+  const mk = logoMark(core, 960, 430, .95);
+  drawLogo(mk, s + 1.4);
+  FEATURES.forEach((f, i) => {
+    const a = i / FEATURES.length * Math.PI * 2 - Math.PI / 2, x = 960 + Math.cos(a) * 420, y = 430 + Math.sin(a) * 300;
+    const chip = S("g", {}, g);
+    const r = S("rect", {x: x - 150, y: y - 34, width: 300, height: 68, rx: 34, fill: C.panel, stroke: f.color, "stroke-width": 3}, chip);
+    const t = S("text", {x, y: y + 9, "text-anchor": "middle", "font-family": F.body, "font-weight": 600, "font-size": 24, fill: "#FFFFFF"}, chip, f.label || f.title);
+    const w = Math.min(380, t.getComputedTextLength() + 60); r.setAttribute("width", w); r.setAttribute("x", x - w / 2);
+    if (t.getComputedTextLength() > 320) { t.setAttribute("textLength", 320); t.setAttribute("lengthAdjust", "spacingAndGlyphs"); }
+    motion.set(chip, {opacity: 0, scale: .6, svgOrigin: `${x} ${y}`});
+    tl.to(chip, {opacity: 1, scale: 1, duration: .35, ease: "back.out(2)"}, Q(s + .1 + i * .1)); cue(Q(s + .1 + i * .1), "pop");
+    tl.to(chip, {x: 960 - x, y: 430 - y, scale: .1, opacity: 0, duration: .5, ease: "power3.in"}, s + 1.0 + i * .04);
+  });
+  cue(s + 1.4, "chime");
+  const wm = S("text", {x: 960, y: 710, "text-anchor": "middle", "font-family": F.disp, "font-weight": 700, "font-size": 76, "letter-spacing": 14, fill: "#FFFFFF"}, g, BR.wordmark);
+  const tg = S("text", {x: 960, y: 780, "text-anchor": "middle", "font-family": F.body, "font-weight": 500, "font-size": 36, fill: C.muted}, g, BR.tagline);
+  motion.set([wm, tg], {opacity: 0, y: 24});
+  tl.to(wm, {opacity: 1, y: 0, duration: .5, ease: "power3.out"}, s + 1.8);
+  tl.to(tg, {opacity: 1, y: 0, duration: .5, ease: "power3.out"}, s + 2.1);
+  if (MC.cta) {
+    const cta = S("g", {}, g);
+    const r = S("rect", {x: 760, y: 830, width: 400, height: 76, rx: 38, fill: C.accent}, cta);
+    const t = S("text", {x: 960, y: 880, "text-anchor": "middle", "font-family": F.body, "font-weight": 700, "font-size": 30, fill: "#FFFFFF"}, cta, MC.cta);
+    const w = t.getComputedTextLength() + 90; r.setAttribute("width", w); r.setAttribute("x", 960 - w / 2);
+    motion.set(cta, {opacity: 0, scale: .7, svgOrigin: "960 868"});
+    tl.to(cta, {opacity: 1, scale: 1, duration: .45, ease: "back.out(2.4)"}, Q(s + 2.6)); cue(Q(s + 2.6), "jingle_out");
+  }
+}
+
+/* ---------- aspect layouts: 16x9 (as designed), 9x16 (stacked), 1x1 (side by side) ---------- */
+const ASPECT = window.ASPECT || "16x9";
+const DIM = {"16x9": [1920, 1080], "9x16": [1080, 1920], "1x1": [1080, 1080]}[ASPECT];
+(function sizeCanvas() {
+  const r = $("root"); const [w, h] = DIM;
+  r.setAttribute("width", w); r.setAttribute("height", h); r.setAttribute("viewBox", `0 0 ${w} ${h}`);
+  for (const id of ["bg1", "bg2"]) { const e = $(id); e.setAttribute("width", w); e.setAttribute("height", h); }
+  document.documentElement.style.width = document.body.style.width = w + "px";
+  document.documentElement.style.height = document.body.style.height = h + "px";
+})();
+const tf = (s, x, y) => `translate(${x},${y}) scale(${s})`;
+function applyLayout() {
+  if (ASPECT === "16x9") return;
+  const V = ASPECT === "9x16";
+  const k = .56;   // intro and close: the whole 16:9 scene, centred
+  for (const id of ["s-intro", "s-close"]) { const o = document.querySelector(`.layout[data-scene="${id}"]`); if (o) o.setAttribute("transform", tf(k, 540 - 960 * k, (DIM[1] - 1080 * k) / 2)); }
+  // features: the stage above the points (9:16) or beside them (1:1)
+  const st = V ? [.96, 40 - 60 * .96, 100 - 110 * .96] : [.5, 20 - 60 * .5, (1080 - 860 * .5) / 2 - 110 * .5];
+  const co = V ? [1.12, 137 - 1150 * 1.12, 960 - 120 * 1.12] : [.68, 562 - 1150 * .68, (1080 - 780 * .68) / 2 - 120 * .68];
+  document.querySelectorAll(".stagewrap").forEach(e => e.setAttribute("transform", tf(...st)));
+  document.querySelectorAll(".colwrap").forEach(e => e.setAttribute("transform", tf(...co)));
+  const fn = $("footnote");
+  if (fn) { fn.setAttribute("x", V ? 40 : 24); fn.setAttribute("y", V ? 1880 : 1062); fn.setAttribute("font-size", V ? 24 : 18); }
+}
+function footnote() {
+  if (!MC.footnote) return;
+  const f = S("text", {id: "footnote", x: 80, y: 1046, "font-family": F.body, "font-weight": 500, "font-size": 20, fill: C.muted}, $("fx"), MC.footnote);
+  motion.set(f, {opacity: 0}); tl.to(f, {opacity: 1, duration: .3}, BEATS[1].start - .3); tl.to(f, {opacity: 0, duration: .3}, B.close.start - .4);
+}
+
+async function main() {
+  await Promise.all(['700 40px "Space Grotesk"', '600 40px "Space Grotesk"', '500 40px "IBM Plex Sans"', '600 40px "IBM Plex Sans"', '700 40px "IBM Plex Sans"'].map(f => document.fonts.load(f)));
+  await document.fonts.ready;
+  if (BR.logo) await new Promise(r => { const i = new Image(); i.onload = i.onerror = r; i.src = BR.logo; });
+  sceneIntro();
+  FEATURES.forEach((f, i) => sceneFeature(f, i));
+  sceneClose(); footnote();
+  applyLayout();
+  tl.set({}, {}, TOTAL); tl.seek(0);
+  window.TOTAL = TOTAL; window.SFX = SFX.sort((a, b) => a[0] - b[0]); window.renderAt = t => { tl.seek(t); }; window.READY = true;
+}
+main();
+</script>
+</body></html>

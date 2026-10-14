@@ -1,0 +1,9 @@
+# A one-minute feature montage for the fictional "Acme Tasks", natively laid out for 16:9, 9:16 and 1:1.
+#   filmwright build examples/montage
+mode: explainer
+title: Acme Tasks montage
+explainer: {format: montage, project: .}
+voice: {type: preset, speaker: aiden}
+music: {mood: inspiring}
+outputs: [hd, vertical, square]
+disclosure: metadata

@@ -1,0 +1,8 @@
+{
+  "name": "filmwright",
+  "version": "0.1.0",
+  "description": "Make narrated product films with filmwright: screen-recorded demo walkthroughs, fully animated explainers, or both, with optional presenter, cloned voice (with consent) and mood-matched music.",
+  "author": {"name": "Dassjay Labs"},
+  "homepage": "https://github.com/dassjaylabs/filmwright",
+  "license": "MIT"
+}

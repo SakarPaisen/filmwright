@@ -1,0 +1,60 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "filmwright"
+version = "0.1.0"
+description = "Make narrated product films on your own machine: screen-recorded demo walkthroughs, fully animated explainers, or both, with optional talking-head presenter, voice cloning and mood-matched music."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.11"
+authors = [{ name = "Dassjay Labs" }]
+keywords = ["video", "demo", "explainer", "animation", "narration", "text-to-speech", "playwright", "ffmpeg"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "Operating System :: MacOS",
+  "Operating System :: POSIX :: Linux",
+  "Programming Language :: Python :: 3",
+  "Topic :: Multimedia :: Video",
+]
+dependencies = [
+  "playwright>=1.47,<2",
+  "pillow>=10.3",
+  "pyyaml>=6.0",
+  "numpy>=1.26",
+]
+
+[project.optional-dependencies]
+# Neural voices on Apple Silicon (preset, described and cloned voices + read-back check).
+voice-mlx = ["mlx-audio>=0.5.7,<0.6; sys_platform == 'darwin' and platform_machine == 'arm64'"]
+dev = ["pytest>=8", "ruff>=0.6"]
+all = ["filmwright[voice-mlx]"]
+
+[project.scripts]
+filmwright = "filmwright.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/dassjaylabs/filmwright"
+Issues = "https://github.com/dassjaylabs/filmwright/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/filmwright"]
+
+[tool.hatch.build.targets.sdist]
+exclude = ["/runs", "/.github"]
+
+[tool.ruff]
+line-length = 130
+target-version = "py311"
+src = ["src"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP"]
+ignore = ["E501", "E731", "B008", "B905"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

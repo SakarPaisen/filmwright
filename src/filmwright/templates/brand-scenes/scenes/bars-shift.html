@@ -1,0 +1,82 @@
+<!doctype html>
+<!-- Bars shift: horizontal bars grow from a centre axis (green right = up, red left = down), a counter
+     totals them; a pill then switches period and the bars glide to a second set of values (some flip sides).
+     Frame-exact: pure function of time (see ../runtime.js).
+     PARAMS: {title:string, fromLabel:string, toLabel:string, unit:string, rows:[{label, a, b}]}   (5-7 rows; a/b signed numbers)
+     Defaults: title "What changed", fromLabel "Last sprint", toLabel "This sprint", unit "%" (a leading "$" is
+     placed before the number, the rest after), 7 generic product-area rows. -->
+<html><head><meta charset="utf-8"></head><body>
+<script>window.PARAMS = /*PARAMS*/{"title":"What changed","fromLabel":"Last sprint","toLabel":"This sprint","unit":"%","rows":[
+{"label":"Onboarding","a":4.2,"b":-1.8},{"label":"Search","a":-2.1,"b":2.6},{"label":"Reports","a":3.1,"b":3.9},{"label":"Billing","a":-3.4,"b":-0.9},
+{"label":"Settings","a":1.2,"b":-2.2},{"label":"Mobile","a":2.4,"b":1.1},{"label":"Exports","a":-1.5,"b":3.3}]}/*END*/;</script>
+<script src="../runtime.js"></script><script src="../characters.js"></script>
+<script>
+const { W, H, U, vertical, ease, seg, lerp, clamp, accent } = Scene;
+const DEF = { title: "What changed", fromLabel: "Last sprint", toLabel: "This sprint", unit: "%", rows: [] };
+const P = Object.assign({}, DEF, Scene.P);
+const rows = (P.rows || []).slice(0, 7), n = rows.length, D = Scene.D;
+const GREEN = "#5fd3a0", RED = "#ef7b7b";
+const maxV = Math.max(1e-6, ...rows.map((r) => Math.max(Math.abs(r.a), Math.abs(r.b))));
+const fmtN = (v) => (v < -0.05 ? "−" : v > 0.05 ? "+" : "") + Math.abs(v).toFixed(1);
+const unitFmt = (v) => { const u = String(P.unit || ""), s = v < -0.05 ? "−" : v > 0.05 ? "+" : "", a = Math.abs(v).toFixed(1); return u[0] === "$" ? s + "$" + a + u.slice(1) : s + a + (u ? " " + u : ""); };
+// layout
+const L = vertical
+  ? { padX: 16, titleY: 30, titleFs: 30, pillY: 128, pillFs: 15, cntY: 178, cntFs: 44, legY: 252, rowsTop: 284, rowsBot: H - 34, labW: 100, labFs: 13, valFs: 12, tipPad: 40, legFs: 11, barH: 0.5 }
+  : { padX: 80, titleY: 52, titleFs: 56, pillY: 150, pillFs: 22, cntY: 46, cntFs: 84, legY: 238, rowsTop: 272, rowsBot: H - 40, labW: 250, labFs: 22, valFs: 21, tipPad: 100, legFs: 18, barH: 0.52 };
+const areaL = L.padX + L.labW + (vertical ? 8 : 20), areaR = W - L.padX, cx = (areaL + areaR) / 2, half = (areaR - areaL) / 2 - L.tipPad;
+const rowH = (L.rowsBot - L.rowsTop) / Math.max(1, n), bh = Math.min(rowH * L.barH, vertical ? 30 : 46);
+const GS = 0.06, GST = 0.035, GD = 0.16, SW = 0.5, SWD = 0.07, HS = 0.55, HST = 0.02, HD = 0.18;
+const R = [];
+let refs = {};
+Scene.define({
+  setup(S) {
+    const st = S.stage, c = Scene.el("canvas", { width: W, height: H }, st); refs.cv = c.getContext("2d");
+    const al = vertical ? "center" : "left";
+    refs.title = Scene.el("div", { class: "serif", text: P.title, style: "position:absolute;left:" + L.padX + "px;right:" + (vertical ? L.padX : W * 0.4) + "px;top:" + L.titleY + "px;text-align:" + al + ";font-weight:700;font-size:" + L.titleFs + "px;line-height:1.08" }, st);
+    refs.pill = Scene.el("div", { style: "position:absolute;top:" + L.pillY + "px;" + (vertical ? "left:0;right:0;display:flex;justify-content:center" : "left:" + L.padX + "px") }, st);
+    const pb = Scene.el("div", { style: "display:inline-grid;padding:" + (vertical ? 7 : 10) + "px " + (vertical ? 20 : 30) + "px;border-radius:999px;background:#22264a;border:1.5px solid #434765;font-weight:600;font-size:" + L.pillFs + "px;letter-spacing:.04em;text-align:center" }, refs.pill);
+    refs.pb = pb;
+    refs.l1 = Scene.el("span", { text: P.fromLabel, style: "grid-area:1/1;color:" + accent }, pb);
+    refs.l2 = Scene.el("span", { text: P.toLabel, style: "grid-area:1/1;color:" + accent }, pb);
+    refs.cnt = Scene.el("div", { style: "position:absolute;" + (vertical ? "left:0;right:0;text-align:center;" : "right:" + L.padX + "px;text-align:right;") + "top:" + L.cntY + "px" }, st);
+    refs.cntNum = Scene.el("div", { class: "serif", style: "font-weight:700;font-size:" + L.cntFs + "px;line-height:1.05;color:#f4f5fb" }, refs.cnt);
+    refs.cntCap = Scene.el("div", { text: "Net change", style: "font-size:" + L.legFs + "px;letter-spacing:.14em;text-transform:uppercase;color:#a9aecb;margin-top:2px" }, refs.cnt);
+    refs.axis = Scene.el("div", { style: "position:absolute;left:" + (cx - 1) + "px;width:2px;top:" + (L.legY + L.legFs * 2) + "px;height:" + (L.rowsBot - L.legY - L.legFs * 2 + 6) + "px;background:linear-gradient(#363a59,#23263f)" }, st);
+    const lg = (txt, col, side) => Scene.el("div", { text: txt, style: "position:absolute;top:" + L.legY + "px;" + (side < 0 ? "right:" + (W - cx + 12 * U) + "px;text-align:right" : "left:" + (cx + 12 * U) + "px") + ";font-size:" + L.legFs + "px;letter-spacing:.1em;text-transform:uppercase;color:" + col + ";font-weight:600;white-space:nowrap" }, st);
+    refs.legL = lg("◂ Down", RED, -1); refs.legR = lg("Up ▸", GREEN, 1);
+    rows.forEach((r, i) => {
+      const y = L.rowsTop + i * rowH + rowH / 2;
+      const lab = Scene.el("div", { text: r.label, style: "position:absolute;left:" + L.padX + "px;width:" + L.labW + "px;top:" + (y - rowH / 2) + "px;height:" + rowH + "px;display:flex;align-items:center;font-size:" + L.labFs + "px;line-height:1.15;color:#c5d0df" }, st);
+      const bar = Scene.el("div", { style: "position:absolute;top:" + (y - bh / 2) + "px;height:" + bh + "px;border-radius:" + (vertical ? 4 : 6) + "px;width:0" }, st);
+      const val = Scene.el("div", { style: "position:absolute;top:" + (y - rowH / 2) + "px;height:" + rowH + "px;display:flex;align-items:center;font-size:" + L.valFs + "px;font-weight:600;white-space:nowrap" }, st);
+      R.push({ lab, bar, val });
+    });
+  },
+  render(t) {
+    Scene.field(refs.cv, t, { n: vertical ? 50 : 90, alpha: 0.45 * seg(t, 0, 1.0) });
+    const tt = t / D;
+    const o = ease.out(seg(tt, 0, 0.06)); refs.title.style.opacity = o; refs.title.style.transform = "translateY(" + 14 * U * (1 - o) + "px)";
+    const po = ease.out(seg(tt, 0.02, 0.06)); refs.pill.style.opacity = po;
+    const sw = ease.io(seg(tt, SW, SWD));
+    refs.l1.style.opacity = 1 - sw; refs.l1.style.transform = "translateY(" + -12 * U * sw + "px)";
+    refs.l2.style.opacity = sw; refs.l2.style.transform = "translateY(" + 12 * U * (1 - sw) + "px)";
+    refs.pb.style.borderColor = sw > 0 && sw < 1 ? accent : "#434765"; refs.pb.style.boxShadow = "0 0 " + 24 * Math.sin(sw * Math.PI) + "px rgba(124,92,255," + 0.35 * Math.sin(sw * Math.PI) + ")";
+    refs.cnt.style.opacity = ease.out(seg(tt, 0.05, 0.06));
+    refs.axis.style.opacity = ease.out(seg(tt, 0.03, 0.06)); refs.legL.style.opacity = refs.legR.style.opacity = ease.out(seg(tt, 0.04, 0.06));
+    let total = 0;
+    rows.forEach((r, i) => {
+      const g1 = ease.out(seg(tt, GS + GST * i, GD)), g2 = ease.io(seg(tt, HS + HST * i, HD));
+      const v = lerp(r.a * g1, r.b, g2); total += v;
+      const w = (Math.abs(v) / maxV) * half, ob = R[i];
+      ob.lab.style.opacity = ease.out(seg(tt, GS + GST * i - 0.02, 0.06));
+      ob.bar.style.width = w + "px"; ob.bar.style.left = (v >= 0 ? cx : cx - w) + "px";
+      ob.bar.style.background = v >= 0 ? "linear-gradient(90deg," + GREEN + "99," + GREEN + ")" : "linear-gradient(270deg," + RED + "99," + RED + ")";
+      ob.val.textContent = fmtN(v); ob.val.style.color = v >= 0 ? GREEN : RED;
+      ob.val.style.opacity = clamp(g1 * 1.5);
+      if (v >= 0) { ob.val.style.left = (cx + w + 10 * U) + "px"; ob.val.style.right = "auto"; } else { ob.val.style.right = (W - cx + w + 10 * U) + "px"; ob.val.style.left = "auto"; }
+    });
+    refs.cntNum.textContent = unitFmt(total);
+    refs.cntNum.style.color = total >= 0 ? "#f4f5fb" : "#f3c4c4";
+  },
+});
+</script></body></html>

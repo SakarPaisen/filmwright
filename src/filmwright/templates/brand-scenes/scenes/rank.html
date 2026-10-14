@@ -1,0 +1,71 @@
+<!doctype html>
+<!-- Rank: six labelled bars appear in a jumbled order, then glide into descending order (longest on top);
+     rank badges 1..6 pop in and the top bar's counter lights up. Frame-exact: pure function of time (see ../runtime.js).
+     PARAMS: {title:string, unit:string, rows:[{label, value}]}   (up to 6 rows, positive numbers)
+     Defaults: title "Most-used features", unit "" (a leading "$" goes before the number, the rest after),
+     six generic rows (Feature A..F). -->
+<html><head><meta charset="utf-8"></head><body>
+<script>window.PARAMS = /*PARAMS*/{"title":"Most-used features","unit":"","rows":[
+{"label":"Feature A","value":420},{"label":"Feature B","value":1850},{"label":"Feature C","value":960},{"label":"Feature D","value":2740},{"label":"Feature E","value":610},{"label":"Feature F","value":1320}]}/*END*/;</script>
+<script src="../runtime.js"></script><script src="../characters.js"></script>
+<script>
+const { W, H, U, vertical, ease, seg, lerp, clamp, accent } = Scene;
+const DEF = { title: "Most-used features", unit: "", rows: [] };
+const P = Object.assign({}, DEF, Scene.P);
+const rows = (P.rows || []).slice(0, 6).map((r, i) => ({ label: r.label, value: +r.value, i })), n = rows.length, D = Scene.D;
+const maxV = Math.max(1e-6, ...rows.map((r) => r.value));
+const fmt = (v) => { const u = String(P.unit || ""), a = Math.round(v).toLocaleString("en-US"); return u[0] === "$" ? "$" + a + u.slice(1) : a + (u ? " " + u : ""); };
+// jumbled slot order (deterministic): slot of row i; guaranteed to differ from the sorted order for most rows
+const sortedIdx = rows.slice().sort((a, b) => b.value - a.value).map((r) => r.i);
+const rankOf = []; sortedIdx.forEach((ri, k) => (rankOf[ri] = k));
+const jr = Scene.rnd(7), order = rows.map((_, i) => i);
+for (let k = 0; k < 50; k++) { for (let i = n - 1; i > 0; i--) { const j = Math.floor(jr() * (i + 1)); [order[i], order[j]] = [order[j], order[i]]; } if (order.every((ri, s) => rankOf[ri] !== s || n < 3) || k > 40) break; }
+const jslot = []; order.forEach((ri, s) => (jslot[ri] = s));
+const L = vertical
+  ? { padX: 16, titleY: 34, titleFs: 32, rowsTop: 150, rowsBot: H - 30, badge: 28, badgeFs: 14, labX: 54, labW: 92, labFs: 13, barX: 152, valW: 92, valFs: 13, topFs: 17, barH: 30 }
+  : { padX: 80, titleY: 48, titleFs: 58, rowsTop: 180, rowsBot: H - 36, badge: 46, badgeFs: 22, labX: 148, labW: 250, labFs: 24, barX: 414, valW: 190, valFs: 22, topFs: 30, barH: 52 };
+const rowH = (L.rowsBot - L.rowsTop) / Math.max(1, n), maxLen = W - L.padX - L.valW - L.barX;
+const AS = 0.06, AST = 0.04, AD = 0.16, SS = 0.5, SST = 0.03, SD = 0.2, BS = 0.74, BST = 0.03;
+let refs = {}; const R = [];
+Scene.define({
+  setup(S) {
+    const st = S.stage, c = Scene.el("canvas", { width: W, height: H }, st); refs.cv = c.getContext("2d");
+    refs.title = Scene.el("div", { class: "serif", text: P.title, style: "position:absolute;left:" + L.padX + "px;right:" + L.padX + "px;top:" + L.titleY + "px;text-align:" + (vertical ? "center" : "left") + ";font-weight:700;font-size:" + L.titleFs + "px;line-height:1.08" }, st);
+    refs.rule = Scene.el("div", { style: "position:absolute;left:" + L.padX + "px;right:" + L.padX + "px;top:" + (L.rowsTop - 14) + "px;height:2px;background:linear-gradient(90deg,#363a59,transparent)" }, st);
+    rows.forEach((r, i) => {
+      const mk = (css, txt) => Scene.el("div", { text: txt || "", style: "position:absolute;left:0;top:0;" + css }, st);
+      const badge = mk("width:" + L.badge + "px;height:" + L.badge + "px;border-radius:50%;background:" + accent + ";color:#0f1120;font-weight:700;font-size:" + L.badgeFs + "px;display:flex;align-items:center;justify-content:center;opacity:0", "");
+      const lab = mk("width:" + L.labW + "px;height:" + rowH + "px;display:flex;align-items:center;font-size:" + L.labFs + "px;line-height:1.15;color:#c5d0df", r.label);
+      const bar = mk("height:" + L.barH + "px;border-radius:" + (vertical ? 5 : 8) + "px;background:linear-gradient(90deg,#4a4f79,#7e85b8);transform-origin:left center");
+      const val = mk("height:" + rowH + "px;display:flex;align-items:center;font-weight:600;white-space:nowrap;font-size:" + L.valFs + "px;color:#c5d0df");
+      R.push({ badge, lab, bar, val });
+    });
+  },
+  render(t) {
+    Scene.field(refs.cv, t, { n: vertical ? 50 : 90, alpha: 0.45 * seg(t, 0, 1.0) });
+    const tt = t / D;
+    const o = ease.out(seg(tt, 0, 0.06)); refs.title.style.opacity = o; refs.title.style.transform = "translateY(" + 14 * U * (1 - o) + "px)"; refs.rule.style.opacity = o;
+    rows.forEach((r, i) => {
+      const ob = R[i], grow = ease.out(seg(tt, AS + AST * jslot[i], AD));
+      const k = ease.io(seg(tt, SS + SST * rankOf[i], SD));
+      const slot = lerp(jslot[i], rankOf[i], k), y = L.rowsTop + slot * rowH + rowH / 2;
+      const top = rankOf[i] === 0, hl = top ? ease.out(seg(tt, SS + SST * (n - 1) + SD, 0.08)) : 0;
+      const len = Math.max(0, (r.value / maxV) * maxLen * grow);
+      ob.lab.style.top = (y - rowH / 2) + "px"; ob.lab.style.left = L.labX + "px"; ob.lab.style.opacity = ease.out(seg(tt, AS + AST * jslot[i] - 0.02, 0.06));
+      ob.lab.style.color = hl > 0 ? lerpColor(hl) : "#c5d0df";
+      const bh = L.barH * (1 + 0.12 * hl);
+      ob.bar.style.top = (y - bh / 2) + "px"; ob.bar.style.left = L.barX + "px"; ob.bar.style.width = len + "px"; ob.bar.style.height = bh + "px";
+      ob.bar.style.background = top && hl > 0 ? "linear-gradient(90deg,#2f00ef," + accent + ")" : "linear-gradient(90deg,#4a4f79,#7e85b8)";
+      ob.bar.style.boxShadow = top ? "0 0 " + 30 * hl + "px rgba(124,92,255," + 0.35 * hl + ")" : "none";
+      ob.val.style.top = (y - rowH / 2) + "px"; ob.val.style.left = (L.barX + len + 12 * U) + "px";
+      ob.val.textContent = fmt(r.value * grow); ob.val.style.opacity = clamp(grow * 1.6);
+      ob.val.style.fontSize = (top ? lerp(L.valFs, L.topFs, hl) : L.valFs) + "px"; ob.val.style.color = top && hl > 0 ? accent : "#c5d0df";
+      const bd = ease.back(seg(tt, BS + BST * rankOf[i], 0.1));
+      ob.badge.textContent = rankOf[i] + 1; ob.badge.style.opacity = clamp(bd * 2);
+      ob.badge.style.left = L.padX + "px"; ob.badge.style.top = (y - L.badge / 2) + "px"; ob.badge.style.transform = "scale(" + (0.4 + 0.6 * bd) + ")";
+      if (!top) ob.badge.style.background = "#262a47", ob.badge.style.color = accent, ob.badge.style.border = "1.5px solid " + accent;
+    });
+  },
+});
+function lerpColor(k) { return k > 0.5 ? "#f4f5fb" : "#c5d0df"; }
+</script></body></html>

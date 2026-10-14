@@ -1,0 +1,41 @@
+# The demo film for the Acme Tasks sample. Build after recording:
+#   python -m filmwright.demo.build_video video.yaml
+output: out/acme-tasks-tour
+music: {mood: upbeat, sync_to_scenes: true}
+presenter: {style: maya, height: 0.25}
+sfx: true
+transition: {type: smoothleft, duration: 0.6}
+voice: {type: preset, speaker: ryan, style: "Warm, friendly and slightly upbeat. Even pace."}
+checks: {tool_names: warn}
+
+title_card:
+  eyebrow: Acme Tasks
+  title: Your week, in one list
+  subtitle: Add a task, give it an owner, tick it off.
+  footer: Sample data · Acme is a fictional company
+intro: >-
+  This is Acme Tasks. Let's plan a week in under a minute.
+
+sections:
+  - clip: videos/S01.mp4
+    label: "1 · This week"
+    text: >-
+      Everything due this week sits in one list, with a running count of what's open and what's done.
+  - clip: videos/S02.mp4
+    label: "2 · Add a task"
+    text: >-
+      Type a task, pick who owns it, and add it. It lands at the bottom of the list, right away.
+  - clip: videos/S03.mp4
+    label: "3 · Tick it off"
+    text: >-
+      When something's finished, tick it. Switch to Open, and only the work that's left stays on screen.
+
+closing_card:
+  title: That's Acme Tasks
+  bullets:
+    - One list for the whole week
+    - Every task has an owner
+    - Open and done, at a glance
+  footer: acme.example
+outro: >-
+  Plan less. Ship more.

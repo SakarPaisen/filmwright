@@ -1,0 +1,8 @@
+name: Feature request
+description: A new option, template, mood, character or output
+labels: [enhancement]
+body:
+  - type: textarea
+    id: need
+    attributes: {label: What would you like to make?, description: "Describe the film or option, and why the current ones don't cover it."}
+    validations: {required: true}

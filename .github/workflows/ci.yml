@@ -1,0 +1,29 @@
+name: CI
+on:
+  push: {branches: [main]}
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        python: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "${{ matrix.python }}"}
+      - name: System packages
+        run: |
+          if [ "$RUNNER_OS" = "Linux" ]; then sudo apt-get update && sudo apt-get install -y ffmpeg espeak-ng; else brew install ffmpeg espeak-ng; fi
+      - run: pip install -e '.[dev]'
+      - run: ruff check src tests
+      - run: python -m compileall -q src
+      - run: pytest -q
+      - name: Smoke test (headless render with the system voice)
+        run: |
+          python -m playwright install --with-deps chromium || python -m playwright install chromium
+          bash scripts/smoke.sh
