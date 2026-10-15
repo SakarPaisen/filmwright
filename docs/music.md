@@ -4,6 +4,11 @@ Every film can get an original score, composed on your machine for the mood you 
 scene changes. Nothing is sampled or downloaded: every instrument is synthesised with NumPy, so there is nothing
 to license and the same inputs always give the same track.
 
+No AI music model is used, on purpose. Local music models are several gigabytes, often licensed for
+non-commercial use only, give a different track every run and can't place a downbeat on an exact cut. The composer
+has none of those problems and needs no setup. A demo film can use your own track instead (`music: {file: ...}`,
+see [film.md](film.md)).
+
 ```yaml
 music:
   mood: upbeat          # upbeat | calm | corporate | inspiring | playful | epic | sad | suspense | none
