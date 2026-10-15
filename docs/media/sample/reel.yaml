@@ -1,0 +1,9 @@
+mode: both
+title: filmwright in thirty seconds
+both: {film: film.yaml}
+voice: {type: preset, speaker: ryan, style: "Warm, upbeat and confident, like a friendly product launch. Clear, even pace."}
+talking_head: {enabled: false}
+music: {mood: upbeat}
+captions: {burn_in: true}
+outputs: [hd, web, gif]
+disclosure: metadata

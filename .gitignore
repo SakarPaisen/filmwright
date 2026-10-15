@@ -46,3 +46,6 @@ beats.json
 *.srt
 *.vtt
 examples/explainer/[0-9][0-9]-*/
+
+# The README sample film is committed on purpose (built from docs/media/sample)
+!docs/media/*.mp4

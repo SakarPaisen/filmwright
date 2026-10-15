@@ -6,6 +6,12 @@ with a one-page `reel.yaml`.
 
 Everything runs locally: the browser, the voices, the music, the encoding. Nothing is uploaded.
 
+<a href="docs/media/filmwright-sample.mp4"><img src="docs/media/filmwright-sample.gif" width="720"
+alt="A 30-second sample film made with filmwright: title, a demo walkthrough, an animated explainer, a feature montage and the options"></a>
+
+**[▶ Watch the 30-second sample with sound](docs/media/filmwright-sample.mp4)**, made with filmwright itself
+([source](docs/media/sample/film.yaml)).
+
 ![Frames from filmwright example films: an animated character story, a whiteboard sketch, a product dashboard, a
 recorded demo with a presenter, a hybrid title scene and a vertical feature montage](docs/media/gallery.jpg)
 

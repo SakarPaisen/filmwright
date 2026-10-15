@@ -1,0 +1,35 @@
+# The 30-second sample film in the README, made with filmwright from frames of the bundled examples.
+# Build the examples it quotes first (demo-app, explainer-invoicing, montage-fitness), then:
+#   filmwright build docs/media/sample
+title: filmwright in thirty seconds
+file_prefix: filmwright-sample
+wordmark: FILMWRIGHT
+tagline: Narrated product films, made on your machine.
+url: github.com/dassjaylabs/filmwright
+brand:
+  colors: {bg: "#0f1222", accent: "#7c5cff", alt: "#22c55e", warm: "#ff8a4c", ink: "#f4f5fb"}
+
+segments:
+  - scene: title
+    headline: Product films, made for you
+    sub: Demo walkthroughs, animated explainers, or both.
+    say: Meet filmwright. It turns your product into a narrated film.
+  - clip: ../../../examples/demo-app/out/acme-tasks-tour.mp4
+    trim: [15.5, 22.5]
+    label: demo walkthrough
+    say: Record a walkthrough of your real app, with a zoom on every click.
+  - clip: ../../../examples/explainer-invoicing/02-translator-cash-flow/build/frames.mp4
+    trim: [17.5, 24.5]
+    label: animated explainer
+    say: Or tell the story with animated characters and sketches.
+  - clip: ../../../examples/montage-fitness/build/frames.mp4
+    trim: [13.5, 19.5]
+    label: feature montage
+    say: Show every feature in a minute, on any screen.
+  - scene: steps
+    title: You choose
+    items: [The voice, A presenter, The music's mood, Every format you need]
+    say: Pick the voice, a presenter, the music, and the formats.
+  - scene: outro
+    cta: Open source on GitHub
+    say: It's open source. Give it a try.
