@@ -36,6 +36,14 @@ pytest
 
 Changes to cloning must keep the consent gate: no option, flag or environment variable may skip it.
 
+## Contributor License Agreement
+
+Code, docs and template contributions need a signed [Contributor License Agreement](CLA.md). When you open your
+first pull request, a bot asks you to sign it by posting one comment; it takes a minute and covers all your future
+pull requests. The CLA lets the maintainer keep using your contribution as the project evolves, including under
+other license terms. You keep the copyright in your work. Bug reports and ideas in issues don't need it.
+
 ## License
 
-By contributing you agree that your contributions are licensed under the MIT License.
+The project is MIT licensed (see [LICENSE](LICENSE)). The filmwright name and logo are not covered by it; see
+[TRADEMARKS.md](TRADEMARKS.md).
