@@ -50,8 +50,9 @@ Priorities:
    comment explaining why, then close).
 4. Put P1 and P2 items in a milestone. Mark small, well-understood ones `good first issue`, and ones you'd like
    help with `help wanted`.
-5. The [project board](https://github.com/users/dassjaylabs/projects) tracks status: Triage → Backlog → Planned →
-   In progress → In review → Done.
+5. Add the issue to the [project board](https://github.com/users/dassjaylabs/projects/1) and set its status:
+   Triage → Backlog (accepted, no date) → Planned (in a milestone) → In progress → In review (pull request open) →
+   Done. Closed issues and merged pull requests move to Done automatically.
 
 ## Pull requests
 
