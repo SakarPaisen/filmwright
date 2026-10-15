@@ -92,7 +92,8 @@ eight, from a feature montage for a gym app to stories in a cloned voice.
 
 The neural voices are [Qwen3-TTS](https://huggingface.co/Qwen) 1.7B, and
 [Whisper](https://huggingface.co/openai/whisper-large-v3-turbo) large-v3-turbo listens to every sentence it speaks:
-a garbled, cut-off or runaway take is regenerated before it reaches the film. See [What's inside](#whats-inside).
+a garbled, cut-off or runaway take is regenerated before it reaches the film. See
+[models, tools and fallbacks](#whats-inside-models-tools-and-fallbacks).
 
 On machines without Apple Silicon, `preset` and `described` fall back to the system voice with a note; a cloned
 voice never falls back silently.
@@ -112,29 +113,54 @@ filmwright voice clone preview --play
 For a full desktop voice-cloning app built on the same voice models, see
 [clodio](https://github.com/dassjaylabs/clodio).
 
-## What's inside
+## What's inside: models, tools and fallbacks
 
-Every model and tool runs on your machine. The models download once, only for the voice type you choose
+**There is no LLM inside filmwright.** It doesn't write your script, design your scenes or call any AI service.
+You (or an AI assistant you choose, such as Claude Code with the bundled skill) write the scenarios, stories and
+narration as plain YAML. filmwright turns them into a film. The only neural networks are the speech models below,
+and they run on your machine.
+
+| Job | What does it | Model or tool | Size · licence |
+|---|---|---|---|
+| Narration, `preset` | built-in narrators: `ryan`, `aiden`, `serena`, `vivian`, `dylan`, `eric`, `uncle_fu`, `ono_anna`, `sohee` | [Qwen3-TTS 1.7B CustomVoice](https://huggingface.co/Qwen) | 4.2 GB · Apache-2.0 |
+| Narration, `described` | turns a sentence ("calm narrator in her thirties") into a voice, renders it once as a reference, then clones that reference so the voice stays the same across the film | Qwen3-TTS 1.7B VoiceDesign + Base | 4.2 GB each · Apache-2.0 |
+| Voice cloning, `clone` | speaks in a recorded voice, only with a matching consent record | Qwen3-TTS 1.7B Base | 4.2 GB · Apache-2.0 |
+| Read-back check | transcribes every narrated sentence; a garbled, cut-off or runaway take is regenerated with a new seed (up to 3 tries, best kept, failures listed). Also transcribes clone recordings | [Whisper large-v3-turbo](https://huggingface.co/openai/whisper-large-v3-turbo) | 1.6 GB · MIT |
+| Runs the speech models | Apple Silicon inference | [MLX](https://github.com/ml-explore/mlx) + [mlx-audio](https://github.com/Blaizzy/mlx-audio) (bf16/fp16 conversions by mlx-community) | MIT |
+| Narration, `system` | robotic but works anywhere, no download | [espeak-ng](https://github.com/espeak-ng/espeak-ng) | GPL-3.0 (separate program) |
+| Animation | animated scenes are HTML pages driven by filmwright's own timeline engine, rendered frame by frame, so every run gives the same film | `motion.js` (filmwright) + [rough.js](https://github.com/rough-stuff/rough) for the hand-drawn look, in Chromium | MIT |
+| Characters | 10 presenters and the story characters are drawn as SVG in code, with rigged arms, blinks, nods and gestures. No image model | filmwright | MIT |
+| Lip sync | mouth shapes timed to the narration | [Rhubarb Lip Sync](https://github.com/DanielSWolf/rhubarb-lip-sync) | MIT |
+| Demo recording | drives your web app and records it, with zooms on each action | [Playwright](https://playwright.dev) + open-source Chromium | Apache-2.0 / BSD |
+| Music | an original score per mood (tempo, key, chords, arrangement) with a downbeat on every scene change. No AI music model | filmwright's composer, synthesised with NumPy | MIT |
+| Sound effects | clicks, whooshes, risers, impacts | filmwright's synthesiser | MIT |
+| Encoding | mixing, loudness, captions, every output format | [ffmpeg](https://ffmpeg.org) | LGPL/GPL (separate program) |
+
+The models download once from Hugging Face, and only the ones the chosen voice type needs
 (`filmwright setup --voice preset|described|clone`).
 
-| Part | What does it | Used for | Size · licence |
-|---|---|---|---|
-| Narration, `preset` | [Qwen3-TTS 1.7B CustomVoice](https://huggingface.co/Qwen) on [MLX](https://github.com/ml-explore/mlx) via [mlx-audio](https://github.com/Blaizzy/mlx-audio) | built-in narrators | 4.2 GB · Apache-2.0 |
-| Narration, `described` | Qwen3-TTS 1.7B VoiceDesign, then Base | designs a voice from a sentence, then keeps it consistent across the film | 4.2 GB each · Apache-2.0 |
-| Narration, `clone` | Qwen3-TTS 1.7B Base | speaks in a consented recorded voice | 4.2 GB · Apache-2.0 |
-| Read-back check | [Whisper large-v3-turbo](https://huggingface.co/openai/whisper-large-v3-turbo) (MLX) | transcribes every narrated sentence to catch bad takes; writes the transcript of a clone recording | 1.6 GB · MIT |
-| Narration, `system` | [espeak-ng](https://github.com/espeak-ng/espeak-ng) | works anywhere, no download | GPL-3.0 (run as a separate program) |
-| Music | filmwright's own composer, synthesised with NumPy. **No AI music model** | an original score per mood, with downbeats on scene changes | built in · MIT |
-| Sound effects | filmwright's own synthesiser | clicks, whooshes, risers, impacts | built in · MIT |
-| Talking head | [Rhubarb Lip Sync](https://github.com/DanielSWolf/rhubarb-lip-sync) + filmwright's SVG characters | mouth shapes timed to the narration | MIT |
-| Recording and animation | [Playwright](https://playwright.dev) + Chromium, filmwright's `motion.js` | records the web app; renders animated scenes frame by frame | Apache-2.0 / BSD |
-| Encoding | [ffmpeg](https://ffmpeg.org) | mixing, captions, every output format | LGPL/GPL (run as a separate program) |
+### Fallbacks
+
+| If... | filmwright... |
+|---|---|
+| the Mac isn't Apple Silicon, or mlx-audio isn't installed | uses the `system` voice for `preset` and `described`, and says so |
+| `clone` can't run, or the consent record is missing or doesn't match the recording | stops with an error. A cloned voice never silently becomes a different voice |
+| a sentence never reads back cleanly after 3 tries | keeps the best take and lists the sentence at the end |
+| Rhubarb isn't installed | moves the presenter's mouth with the narration's loudness (not true lip sync) |
+| there's no open-source Chromium build for the platform | uses Chrome for Testing and reports it as `FALLBACK` in `filmwright doctor` |
+| you'd rather use your own music | demo films take `music: {file: ...}` ([docs/film.md](docs/film.md)) |
 
 Why no music model: local music models are gigabytes, often licensed for non-commercial use only, give a different
-track each run and can't land a downbeat on an exact cut. The built-in composer has none of those problems and
-needs no setup. Demo films can use your own royalty-free track instead (`music: {file: ...}`, see
-[docs/film.md](docs/film.md)); more on the composer in [docs/music.md](docs/music.md).
-Full list with versions: [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md).
+track each run, and can't place a downbeat on an exact cut. The built-in composer has none of those problems and
+needs no setup ([docs/music.md](docs/music.md)).
+
+### Tested with
+
+Apple M5 Max, macOS 26.5, Python 3.11 and 3.13, mlx 0.32.4, mlx-audio 0.5.9, ffmpeg 8.1, Rhubarb 1.14.0, with
+`mlx-community/Qwen3-TTS-12Hz-1.7B-{CustomVoice,VoiceDesign,Base}-bf16` and
+`mlx-community/whisper-large-v3-turbo-asr-fp16`. On that machine a sentence takes about 3 seconds to speak and check.
+CI runs the test suite and a system-voice build on Ubuntu and macOS (Python 3.11 and 3.12). Full component list:
+[THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md).
 
 ## Disclosure
 
