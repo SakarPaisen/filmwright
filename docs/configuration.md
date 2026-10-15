@@ -20,13 +20,33 @@ default shown. `filmwright options` prints the same choices.
 | `music.sync_to_scenes` | `true`, `false` | `true` | Land a downbeat on every scene change |
 | `music.level` | dB | auto | Music level under the narration (auto: about -12 for a score, -22 for an ambient bed) |
 | `captions.burn_in` | `true`, `false` | `true` | Small captions at the bottom of the frame. An `.srt` is always written |
-| `outputs` | list of `4k`, `hd`, `vertical`, `square`, `web`, `gif` | `[4k, hd]` | Files to deliver |
+| `outputs` | list of `4k`, `hd`, `vertical`, `square`, `web`, `gif`, `stems` | `[4k, hd]` | Files to deliver; `stems` comes with at least one video ([below](#stems)) |
 | `disclosure` | `none`, `metadata`, `end-card` | `metadata` | Say that the narration voice is synthetic ([disclosure.md](disclosure.md)) |
 | `checks.tool_names` | `off`, `warn`, `block` | `warn` | Flag film text that names production tools or leaves placeholders |
 | `demo.scenarios`, `demo.video` | paths | `scenarios.yaml`, `video.yaml` | Demo inputs ([demo.md](demo.md)) |
 | `explainer.format` | `story`, `montage` | `story` | Explainer format ([explainer.md](explainer.md)) |
 | `explainer.project` | folder | `explainer` | Explainer project folder (`project.json`, `stories.json`) |
 | `both.film` | path | `film.yaml` | The mixed film's segments ([hybrid.md](hybrid.md)) |
+
+## Stems
+
+`stems` adds the soundtrack's parts beside each film, for mixing or grading in an editor such as Kdenlive, Shotcut,
+DaVinci Resolve or Audacity:
+
+| File | What's in it |
+|---|---|
+| `<film>-narration.wav` | the narration alone |
+| `<film>-music.wav` | the score, at its level in the mix and with the same ducking under the voice |
+| `<film>-sfx.wav` | the sound effects (only when the film has any) |
+
+They are 48 kHz stereo, 32-bit float WAV (float, so nothing clips), start at 0:00 and run with the film. Put them
+on three tracks at the start of the timeline at 0 dB and they add up to the film's soundtrack (within the AAC
+compression of the MP4). An end card from `disclosure: end-card` comes after the stems end. There is no timeline
+interchange file (OTIO, EDL, FCPXML) yet.
+
+```yaml
+outputs: [hd, stems]
+```
 
 ## Platform support
 

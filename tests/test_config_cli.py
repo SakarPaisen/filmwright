@@ -26,6 +26,7 @@ def test_defaults_fill_in(tmp_path):
     ({"mode": "movie"}, "mode"),
     ({"music": {"mood": "angry"}}, "music.mood"),
     ({"outputs": ["8k"]}, "outputs"),
+    ({"outputs": ["stems"]}, "stems come with a video"),
     ({"voice": {"type": "described"}}, "voice.description"),
     ({"voice": {"type": "clone"}}, "voice.sample"),
     ({"talking_head": {"enabled": True, "character": "nobody"}}, "talking_head.character"),
@@ -105,3 +106,10 @@ def test_no_music_and_no_presenter(tmp_path):
     reel = C.load(write(tmp_path, {"mode": "demo", "voice": {"type": "system"}, "music": {"mood": "none"}}))
     film = yaml.safe_load(build._resolve_demo(reel, tmp_path)[0].read_text())
     assert "music" not in film and "presenter" not in film
+
+
+def test_stems_reach_the_pipelines(tmp_path):
+    cfg = C.load(write(tmp_path, {"mode": "explainer", "outputs": ["square", "stems"]}))
+    settings = build._settings(cfg, tmp_path)
+    import json
+    assert json.loads(settings.read_text())["outputs"] == ["stems", "hd"]     # stems, plus a master to export from

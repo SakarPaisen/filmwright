@@ -18,7 +18,8 @@ PRESET_SPEAKERS = ("ryan", "aiden", "serena", "vivian", "dylan", "eric", "uncle_
 CHARACTERS = ("leo", "leo-light", "leo-stubble", "sam", "ana", "lee", "maya", "raj", "kit", "jo")
 CORNERS = ("bottom-right", "bottom-left")
 MOODS = ("upbeat", "calm", "corporate", "inspiring", "playful", "epic", "sad", "suspense", "none")
-OUTPUTS = ("4k", "hd", "vertical", "square", "web", "gif")
+OUTPUTS = ("4k", "hd", "vertical", "square", "web", "gif", "stems")
+VIDEO_OUTPUTS = OUTPUTS[:-1]                 # stems come alongside a video, never instead of one
 DISCLOSURE = ("none", "metadata", "end-card")
 CHECK_LEVELS = ("off", "warn", "block")
 EXPLAINER_FORMATS = ("story", "montage")
@@ -76,6 +77,8 @@ def validate(cfg: dict) -> list[str]:
     else:
         for o in outs:
             _one_of(e, "outputs", o, OUTPUTS)
+        if not any(o in VIDEO_OUTPUTS for o in outs):
+            e.append("outputs: stems come with a video; add one of " + ", ".join(VIDEO_OUTPUTS))
     _one_of(e, "disclosure", cfg["disclosure"], DISCLOSURE)
     _one_of(e, "checks.tool_names", cfg["checks"].get("tool_names"), CHECK_LEVELS)
     if cfg["mode"] == "explainer":

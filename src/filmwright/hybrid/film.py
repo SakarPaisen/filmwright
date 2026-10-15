@@ -196,7 +196,8 @@ class Film:
         self.composite(self.build / "frames.mp4", segs, total, self.build / "composite.mp4")
         vo = R.narration_track(beats, {b["key"]: self.root / "vo" / f"{b['key']}.wav" for b in beats if b.get("text")}, total,
                                float(self.cfg.get("tempo", TEMPO)), self.build / "vo.wav")
-        R.soundtrack(self.build, total, [s["start"] for s in segs[1:]], sfx, self.cfg.get("music"), vo)
+        R.soundtrack(self.build, total, [s["start"] for s in segs[1:]], sfx, self.cfg.get("music"), vo,
+                     stems="stems" in (self.cfg.get("outputs") or []))
         made = R.finish(self.build / "composite.mp4", self.build / "mix.wav", [b for b in beats if b.get("text")], total,
                         self.root, self.stem, self.cfg, vo)
         print("done:", ", ".join(f.name for f in made), flush=True)

@@ -107,7 +107,8 @@ class Montage:
         R.render_frames(TEMPLATE, init, total, self.build / "frames.mp4")
         vo = R.narration_track(bs, {b["key"]: self.root / "vo" / f"{b['key']}.wav" for b in bs}, total,
                                float(self.cfg.get("tempo", TEMPO)), self.build / "vo.wav")
-        R.soundtrack(self.build, total, [b["start"] - .35 for b in bs[1:]], sfx, self.cfg.get("music"), vo)
+        R.soundtrack(self.build, total, [b["start"] - .35 for b in bs[1:]], sfx, self.cfg.get("music"), vo,
+                     stems="stems" in (self.cfg.get("outputs") or []))
         (self.build / "total.txt").write_text(f"{total}")
         made = R.finish(self.build / "frames.mp4", self.build / "mix.wav", bs, total, self.root, self.stem, self.cfg, vo)
         burn = (self.cfg.get("captions") or {}).get("burn_in", True) is not False

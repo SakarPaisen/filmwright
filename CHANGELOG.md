@@ -4,6 +4,11 @@
 
 First public release.
 
+- `stems` output: the narration, music and sound effects as separate WAVs beside each film, aligned to it and at
+  their levels in the mix, for finishing in another editor.
+- Demo films: the narration no longer drifts behind the picture and captions from section to section (each
+  section's AAC padding was being kept when sections were joined; up to about 60 ms in a 45-second film).
+
 - One command, `filmwright`, with an interactive `new` wizard and a `reel.yaml` config.
 - Three film types: screen-recorded **demo** walkthroughs, fully animated **explainers** (story and montage
   formats), and **both** in one film.

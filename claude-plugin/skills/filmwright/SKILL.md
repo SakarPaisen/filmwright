@@ -38,7 +38,7 @@ Ask only what they haven't said. Recommend defaults rather than listing everythi
 | Voice | `preset` (speaker `ryan`), `described` (a voice described in words), `clone`, `system` | `preset` |
 | Talking head | yes / no, character `leo` `sam` `ana` `lee` `maya` `raj` `kit` `jo` | no |
 | Music | `upbeat` `calm` `corporate` `inspiring` `playful` `epic` `sad` `suspense` `none` | `upbeat` |
-| Outputs | `4k` `hd` `vertical` `square` `web` `gif` | `4k, hd` |
+| Outputs | `4k` `hd` `vertical` `square` `web` `gif` `stems` (separate narration/music/SFX WAVs) | `4k, hd` |
 | Disclosure | `metadata`, `end-card`, `none` | `metadata` |
 
 Then write the project non-interactively:

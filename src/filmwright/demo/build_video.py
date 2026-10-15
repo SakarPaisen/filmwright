@@ -257,8 +257,10 @@ def music_plan(cfg: dict[str, Any]) -> dict[str, Any] | None:
     return mus
 
 
-def add_music(joined: Path, mus: dict[str, Any], root: Path, total: float, work: Path, cuts: list[float]) -> Path:
-    """Mix music under the narration, ducking it further while someone speaks."""
+def add_music(joined: Path, mus: dict[str, Any], root: Path, total: float, work: Path, cuts: list[float],
+              stem_wav: Path | None = None) -> Path:
+    """Mix music under the narration, ducking it further while someone speaks. `stem_wav` also gets the music
+    exactly as it sits in the mix (levelled and ducked)."""
     wav = work / "music.wav"
     if mus.get("file"):
         src = (root / str(mus["file"])).expanduser()
@@ -274,11 +276,49 @@ def add_music(joined: Path, mus: dict[str, Any], root: Path, total: float, work:
     duck = "[m][v1]sidechaincompress=threshold=0.02:ratio=4:attack=80:release=900[md];" if mus.get("duck", True) \
         else "[m]anull[md];"
     out = work / "with_music.mp4"
+    split, extra = "", []
+    if stem_wav:
+        duck = duck.replace("[md];", "[md0];")
+        split = "[md0]asplit=2[md][ms];"
+        extra = ["-map", "[ms]", "-t", f"{total:.3f}", "-ar", "48000", "-ac", "2", "-c:a", "pcm_f32le",
+                 "-fflags", "+bitexact", "-flags:a", "+bitexact", str(stem_wav)]
     run(["ffmpeg", "-y", "-i", str(joined), "-i", str(wav), "-filter_complex",
          f"[0:a]asplit=2[v1][v2];[1:a]loudnorm=I={level}:TP=-9:LRA=11,aformat=sample_rates=48000:channel_layouts=stereo[m];"
-         + duck + "[v2][md]amix=inputs=2:duration=first:normalize=0:dropout_transition=0[a]",
-         "-map", "0:v", "-map", "[a]", "-c:v", "copy", "-c:a", "aac", "-flags:a", "+bitexact", "-b:a", "192k", str(out)])
+         + duck + split + "[v2][md]amix=inputs=2:duration=first:normalize=0:dropout_transition=0[a]",
+         "-map", "0:v", "-map", "[a]", "-c:v", "copy", "-c:a", "aac", "-flags:a", "+bitexact", "-b:a", "192k", str(out),
+         *extra])
     return out
+
+
+def write_stems(out_base: Path, sections: list[tuple[Path, Path | None, float]], trans_d: float, work: Path) -> None:
+    """<output>-narration.wav and (when there are effects) <output>-sfx.wav: each section's narration and effects cut
+    and crossfaded exactly as the film's audio is, as 32-bit float 48 kHz stereo WAV. add_music() writes the music
+    stem. Laid side by side in an editor, the three add up to the film's soundtrack."""
+    ms = int(LEAD * 1000)
+    kinds = {"narration": [(w, f"adelay={ms}|{ms},apad") for w, _, _ in sections]}
+    if any(f for _, f, _ in sections):
+        kinds["sfx"] = [(f, "apad") for _, f, _ in sections]
+    for name, srcs in kinds.items():
+        pieces = []
+        for k, ((src, af), (_, _, total)) in enumerate(zip(srcs, sections)):
+            piece = work / f"stem-{name}-{k:02d}.wav"
+            inp = ["-i", str(src)] if src else ["-f", "lavfi", "-i", "anullsrc=r=48000:cl=stereo"]
+            run(["ffmpeg", "-y", *inp, "-af", f"aresample=48000,aformat=channel_layouts=stereo,{af},atrim=0:{total:.3f}",
+                 "-c:a", "pcm_f32le", str(piece)])
+            pieces.append(piece)
+        dst = out_base.parent / (out_base.name + f"-{name}.wav")
+        f32 = ["-ar", "48000", "-ac", "2", "-c:a", "pcm_f32le", "-fflags", "+bitexact", "-flags:a", "+bitexact", str(dst)]
+        if trans_d > 0 and len(pieces) > 1:
+            graph, prev = "", "[0:a]"
+            for k in range(1, len(pieces)):
+                graph += f"{prev}[{k}:a]acrossfade=d={trans_d:.3f}:c1=tri:c2=tri[x{k}];"
+                prev = f"[x{k}]"
+            run(["ffmpeg", "-y", *sum([["-i", str(p_)] for p_ in pieces], []), "-filter_complex", graph.rstrip(";"),
+                 "-map", prev, *f32])
+        else:
+            listing = work / f"stem-{name}.txt"
+            listing.write_text("".join(f"file '{p_}'\n" for p_ in pieces))
+            run(["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", str(listing), *f32])
 
 
 def audio_chain(total: float, sfx_idx: int | None = None) -> str:
@@ -487,9 +527,11 @@ def main() -> int:
         starts.append(acc)
         acc += plan["total"] - trans_d
     segs, narrs, cues, chapters = [], [], [], []
+    stem_src: list[tuple[Path, Path | None, float]] = []   # each section's narration, effects (or none) and length, for stems
     last_i = len(plans) - 1
     for plan, t0 in zip(plans, starts):
         i, part, total, text, wav, a = plan["i"], plan["part"], plan["total"], plan["text"], plan["wav"], plan["a"]
+        part_sfx = None
         seg = work / f"p{i:02d}.mp4"
         fade_in = "fade=t=in:st=0:d=0.4," if (keep_fades or i == 0) else ""
         fade_out = f"fade=t=out:st={total - 0.4:.3f}:d=0.4," if (keep_fades or i == last_i) else ""
@@ -557,6 +599,7 @@ def main() -> int:
                 cues_sfx = sfx_cues(part, meta, camera) + [(a0 + 0.05, "pop") for _, a0, _ in ovs] + ([(0.0, "swish")] if i > 0 else [])
                 if cues_sfx:
                     sfx_wav = sfx_track(cues_sfx, total, work / f"p{i:02d}_sfx.wav", sfx_level)
+                    part_sfx = sfx_wav
                     inputs += ["-i", str(sfx_wav)]
                     sfx_idx, nxt = nxt, nxt + 1
             filt = chain + f"[{src}]{fade_in}{fade_out}format=yuv420p[v];" + audio_chain(total, sfx_idx)
@@ -569,6 +612,7 @@ def main() -> int:
         run(["ffmpeg", "-y", "-i", str(wav), "-af", f"adelay={int(LEAD * 1000)}|{int(LEAD * 1000)},apad,atrim=0:{narr_len:.3f}",
              "-ar", "48000", "-ac", "2", str(narr)])
         narrs.append(narr)
+        stem_src.append((wav, part_sfx, total))
         if text:
             ss = sentences(text)
             chars = sum(len(x) for x in ss) or 1
@@ -584,30 +628,44 @@ def main() -> int:
     joined = work / "joined.mp4"
     if trans_d > 0 and len(segs) > 1:
         lens = [duration(s_) for s_ in segs]
-        vf, af, pv, pa, off = "", "", "[0:v]", "[0:a]", 0.0
+        # Each section's AAC audio decodes with up to 1024 samples of end padding; trimmed to the section's planned
+        # length first (to the millisecond, as encode() cut it), or every crossfade would push the narration later
+        # than the picture and the captions.
+        af = "".join(f"[{k}:a]atrim=0:{plans[k]['total']:.3f},asetpts=PTS-STARTPTS[t{k}];" for k in range(len(segs)))
+        vf, pv, pa, off = "", "[0:v]", "[t0]", 0.0
         for k in range(1, len(segs)):
             off += lens[k - 1] - trans_d
             tt = str(parts[k].get("transition", trans_type)) if k < len(parts) else trans_type   # per-section override on the incoming section
             vf += f"{pv}[{k}:v]xfade=transition={tt}:duration={trans_d:.3f}:offset={off:.3f}[v{k}];"
-            af += f"{pa}[{k}:a]acrossfade=d={trans_d:.3f}:c1=tri:c2=tri[a{k}];"
+            af += f"{pa}[t{k}]acrossfade=d={trans_d:.3f}:c1=tri:c2=tri[a{k}];"
             pv, pa = f"[v{k}]", f"[a{k}]"
         print(f"transitions: {trans_type}, {trans_d:.1f}s, between {len(segs)} sections")
         run(["ffmpeg", "-y", *sum([["-i", str(s_)] for s_ in segs], []), "-filter_complex", (vf + af).rstrip(";"),   # ffmpeg 5 rejects a trailing ';'
              "-map", pv, "-map", pa, "-c:v", "libx264", "-preset", "fast", "-crf", "17", "-pix_fmt", "yuv420p",
              "-c:a", "aac", "-flags:a", "+bitexact", "-b:a", "192k", str(joined)])
     else:
+        # Picture: stream-copied. Sound: re-joined from each section trimmed to its length, because a stream copy keeps
+        # every section's AAC priming and padding and the narration would drift behind the picture section by section.
         listing = work / "concat.txt"
         listing.write_text("".join(f"file '{p_}'\n" for p_ in segs))
-        run(["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", str(listing), "-c", "copy", str(joined)])
+        af = "".join(f"[{k + 1}:a]atrim=0:{plans[k]['total']:.3f},asetpts=PTS-STARTPTS[t{k}];" for k in range(len(segs)))
+        af += "".join(f"[t{k}]" for k in range(len(segs))) + f"concat=n={len(segs)}:v=0:a=1[a]"
+        run(["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", str(listing), *sum([["-i", str(s_)] for s_ in segs], []),
+             "-filter_complex", af, "-map", "0:v", "-map", "[a]", "-c:v", "copy", "-c:a", "aac", "-flags:a", "+bitexact",
+             "-b:a", "192k", str(joined)])
     total_len = duration(joined)
     out_base.parent.mkdir(parents=True, exist_ok=True)
     m4a = out_base.parent / (out_base.name + "-voiceover.m4a")   # narration only: no sound effects, no music
     nlist = work / "narration.txt"
     nlist.write_text("".join(f"file '{p_}'\n" for p_ in narrs))
     run(["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", str(nlist), "-c:a", "aac", "-flags:a", "+bitexact", "-b:a", "192k", "-fflags", "+bitexact", "-metadata:s:a:0", "encoder=", str(m4a)])
+    stems = bool(cfg.get("stems"))
+    if stems:
+        write_stems(out_base, stem_src, trans_d, work)
     mus = music_plan(cfg)
     if mus:
-        joined = add_music(joined, mus, root, total_len, work, [round(t, 3) for t in starts])
+        joined = add_music(joined, mus, root, total_len, work, [round(t, 3) for t in starts],
+                           stem_wav=out_base.parent / (out_base.name + "-music.wav") if stems else None)
         kind = mus.get("file") or (f"{mus['mood']} score on the section cuts" if mus["sync_to_scenes"] else f"{mus['mood']} ambient bed")
         print(f"music: {kind}, {mus['level_lufs']:.0f} LUFS, ducked under the voice")
     srt = out_base.with_suffix(".srt")

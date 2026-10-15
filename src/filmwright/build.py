@@ -101,6 +101,7 @@ def _resolve_demo(reel: dict, root: Path) -> tuple[Path, Path]:
     else:
         film.pop("presenter", None)
     film["checks"] = reel["checks"]
+    film["stems"] = "stems" in reel["outputs"]
     film.setdefault("output", f"out/{_stem(reel, root)}")
     resolved = src.with_name(f".{src.stem}.resolved.yaml")      # beside the original: its relative clip paths still work
     resolved.write_text("# written by filmwright build from reel.yaml + " + src.name + "; edit those instead\n"
@@ -128,7 +129,7 @@ def build_demo(reel: dict, root: Path, only: str | None, skip_record: bool) -> P
 
 # --- explainer / both ----------------------------------------------------------------------------------
 
-PIPELINE_OUTPUTS = ("4k", "hd")           # what the animated pipelines encode themselves; the rest come from export
+PIPELINE_OUTPUTS = ("4k", "hd", "stems")  # what the animated pipelines make themselves; the rest come from export
 
 
 def _settings(reel: dict, root: Path, native: tuple[str, ...] = PIPELINE_OUTPUTS) -> Path:
@@ -137,7 +138,9 @@ def _settings(reel: dict, root: Path, native: tuple[str, ...] = PIPELINE_OUTPUTS
     music = {"mood": m["mood"], "sync_to_scenes": bool(m.get("sync_to_scenes", True))}
     if m.get("level") is not None:
         music["level"] = float(m["level"])
-    outs = [o for o in reel["outputs"] if o in native] or ["hd"]       # always keep a master to export from
+    outs = [o for o in reel["outputs"] if o in native]
+    if not any(o in ("4k", "hd") for o in outs):
+        outs.append("hd")                                              # always keep a master to export from
     s: dict[str, Any] = {"voice": voice_block(reel), "music": music, "talking_head": dict(reel["talking_head"]),
                          "captions": dict(reel["captions"]), "outputs": outs, "checks": dict(reel["checks"])}
     if "brand" in reel.get("_explicit", []):
@@ -182,7 +185,7 @@ def build_explainer(reel: dict, root: Path, only: str | None) -> list[tuple[Path
     else:
         if not (proj / "montage.json").is_file():
             raise C.ConfigError(f"{proj / 'montage.json'} not found (explainer.project in reel.yaml)")
-        native = ("4k", "hd", "vertical", "square")
+        native = ("4k", "hd", "vertical", "square", "stems")
         ok = _pipeline("filmwright.explainer.montage", proj, _settings(reel, root, native),
                        [["tts"], ["render"], ["verify"]], root)
         if not ok:
@@ -237,7 +240,15 @@ def finish(reel: dict, master: Path, already: list[Path], out_dir: Path, stem: s
     srt = master.with_name(stem + ".srt") if master.with_name(stem + ".srt").is_file() else master.with_suffix(".srt")
     if srt.is_file():
         shutil.copyfile(srt, out_dir / f"{stem}.srt")
-    rest = [o for o in reel["outputs"] if o not in done]
+    if "stems" in reel["outputs"]:
+        from filmwright.core.mix import STEM_NAMES
+        for name in STEM_NAMES:
+            src = master.with_name(f"{stem}-{name}.wav")
+            if src.is_file():
+                dst = out_dir / src.name
+                shutil.copyfile(src, dst)
+                made.append(dst)
+    rest = [o for o in reel["outputs"] if o not in done and o != "stems"]
     if rest:
         burn = bool(reel["captions"]["burn_in"]) and reel["mode"] == "demo"     # animated films burn captions in already
         made += render_outputs(master, srt if srt.is_file() else None, rest, out_dir, stem, burn_captions=burn)

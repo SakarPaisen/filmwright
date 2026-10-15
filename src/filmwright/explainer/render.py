@@ -279,8 +279,9 @@ def narration_track(beats: list[dict], wavs: dict[str, Path], total: float, temp
 
 
 def soundtrack(build: Path, total: float, cuts: list[float], sfx_cues: list, music: dict | None, vo_wav: Path | None,
-               out: Path | None = None) -> Path:
-    """Score (mood from `music`), effects and narration, mixed and loudness-normalised."""
+               out: Path | None = None, stems: bool = False) -> Path:
+    """Score (mood from `music`), effects and narration, mixed and loudness-normalised. With `stems`, the parts are
+    also written to build/stems/ as they sit in the mix (see core.mix)."""
     music = dict(music or {})
     mood = str(music.get("mood", "upbeat"))
     mus = None
@@ -294,7 +295,7 @@ def soundtrack(build: Path, total: float, cuts: list[float], sfx_cues: list, mus
         fx = sfx_track([(float(t), str(n)) for t, n in sfx_cues], total, build / "sfx.wav", level=0.42)
     from filmwright.core.mix import mix
     return mix(vo_wav, out or build / "mix.wav", mus, fx, music_db_under=float(music.get("level", -14)),
-               sfx_db=float(music.get("sfx_db", -3)), seconds=total)
+               sfx_db=float(music.get("sfx_db", -3)), seconds=total, stems_dir=build / "stems" if stems else None)
 
 
 # ---------------------------------------------------------------------------------------------------- captions + encode
@@ -373,7 +374,22 @@ def finish(frames: Path, mix_wav: Path, beats: list[dict], total: float, folder:
     from filmwright.core.tags import strip_encoder_tags
     for f in made:
         strip_encoder_tags(f)
+    if "stems" in outputs:
+        made += copy_stems(mix_wav.parent / "stems", folder, stem)
     return made
+
+
+def copy_stems(src: Path, folder: Path, stem: str) -> list[Path]:
+    """<stem>-narration.wav, -music.wav, -sfx.wav beside the film (the parts the film has)."""
+    from filmwright.core.mix import STEM_NAMES
+    out = []
+    for name in STEM_NAMES:
+        f = src / f"{name}.wav"
+        if f.is_file():
+            dst = folder / f"{stem}-{name}.wav"
+            shutil.copyfile(f, dst)
+            out.append(dst)
+    return out
 
 
 def verify(files: list[Path], srt: Path | None = None, checks: dict | None = None) -> int:

@@ -33,7 +33,7 @@ recorded demo with a presenter, a hybrid title scene and a vertical feature mont
 | Talking head | an animated, lip-synced presenter in the corner, 10 characters, or none |
 | Music | original score in a mood: `upbeat`, `calm`, `corporate`, `inspiring`, `playful`, `epic`, `sad`, `suspense`, or `none`; downbeats land on scene changes |
 | Captions | small and burned in at the bottom, plus an `.srt` |
-| Outputs | `4k`, `hd`, `vertical` (9:16), `square` (1:1), `web` (720p/480p + WebVTT), `gif` teaser |
+| Outputs | `4k`, `hd`, `vertical` (9:16), `square` (1:1), `web` (720p/480p + WebVTT), `gif` teaser, `stems` (narration, music and effects as separate WAVs for your own editor) |
 | Disclosure | note the synthetic voice in the file metadata, on an end card, or not at all |
 
 ## Quick start
@@ -58,7 +58,7 @@ Narration voice?
   1. Preset voice  2. Described voice  3. Cloned voice  4. System voice
 Add an animated talking-head presenter? [y/N]
 Music?  upbeat · calm · corporate · inspiring · playful · epic · sad · suspense · none
-Outputs (4k, hd, vertical, square, web, gif) [4k,hd]
+Outputs (4k, hd, vertical, square, web, gif, stems) [4k,hd]
 ```
 
 Every question has a flag, so scripts and CI can skip the prompts:

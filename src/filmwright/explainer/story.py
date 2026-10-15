@@ -155,7 +155,8 @@ class Project:
         bs = init["BEATS"]
         vo = R.narration_track(bs, {b["key"]: d / "vo" / f"{b['key']}.wav" for b in bs}, total,
                                float(self.cfg.get("tempo", TEMPO)), B / "vo.wav")
-        R.soundtrack(B, total, [b["start"] for b in bs[1:]], sfx, self.cfg.get("music"), vo)
+        R.soundtrack(B, total, [b["start"] for b in bs[1:]], sfx, self.cfg.get("music"), vo,
+                     stems="stems" in (self.cfg.get("outputs") or []))
         (B / "total.txt").write_text(f"{total}")
         made = R.finish(B / "frames.mp4", B / "mix.wav", bs, total, d, self.stem(c), self.cfg, vo)
         print(f"{n:02d} done: {', '.join(f.name for f in made)}", flush=True)
