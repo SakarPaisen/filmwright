@@ -1,6 +1,9 @@
 {
   "name": "filmwright",
-  "owner": {"name": "Dassjay Labs"},
+  "owner": {
+    "name": "Dassjay Labs"
+  },
+  "description": "filmwright: make narrated product films (demo walkthroughs, animated explainers, or both) from Claude Code.",
   "plugins": [
     {
       "name": "filmwright",

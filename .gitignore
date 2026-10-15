@@ -33,3 +33,15 @@ voice/consent*.json
 
 # sample recordings made by examples/both/make_sample_clip.py
 examples/both/recordings/
+
+# Build output that pipelines write beside their inputs (demo results, recordings, narration, beat plans)
+.*.resolved.yaml
+results.json
+results.md
+shots/
+videos/
+vo/
+beats.json
+*.srt
+*.vtt
+examples/explainer/[0-9][0-9]-*/
