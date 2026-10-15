@@ -197,6 +197,11 @@ skill agrees the options with you, writes the scenarios or stories, builds the f
 - Neural voices: Apple Silicon (MLX). Other platforms use the system voice for now.
 - Rendering 4K is CPU-heavy. A 40-second animated film takes about two minutes on a recent Apple Silicon Mac.
 
+## Like it?
+
+If filmwright saves you time, a ⭐ on GitHub helps other people find it. Films you made with it, bug reports
+and ideas are just as welcome in [Issues](https://github.com/dassjaylabs/filmwright/issues).
+
 ## Contributing and license
 
 Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) and the [Code of Conduct](CODE_OF_CONDUCT.md);
