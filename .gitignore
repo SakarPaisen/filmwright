@@ -16,8 +16,9 @@ out/
 .filmwright/
 auth.json
 *.session.json
-voice/sample*.wav
-voice/consent*.json
+**/voice/sample*
+**/voice/*.consent.json
+**/voice/passage*.txt
 *.mp4
 *.mov
 *.mkv

@@ -1,0 +1,17 @@
+{
+ "product": "Acme Invoice",
+ "wordmark": "ACME INVOICE",
+ "tagline": "Get paid. Get back to work.",
+ "url": "acme-invoice.example",
+ "file_prefix": "acme-invoice",
+ "brand": {"colors": {"bg": "#0b1a1f", "accent": "#14b8a6", "alt": "#f59e0b", "warm": "#fb7185", "ink": "#f1f5f9"}},
+ "archetypes": "BCA",
+ "stories_per_palette": 1,
+ "walls": [["#E8F7F5", "#D2EEEA"], ["#FFF4E5", "#FCE6C8"], ["#FDECEF", "#F9D9DF"]],
+ "voice": {"type": "preset", "speaker": "aiden", "style": "Calm, confident and friendly, like a trusted advisor. Clear, even pace."},
+ "music": {"mood": "corporate"},
+ "talking_head": {"enabled": true, "character": "ana", "corner": "bottom-right"},
+ "captions": {"burn_in": true},
+ "outputs": ["4k", "hd"],
+ "checks": {"tool_names": "warn"}
+}

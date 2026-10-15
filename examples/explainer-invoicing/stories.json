@@ -1,0 +1,80 @@
+[
+ {
+  "n": 1, "slug": "designer-month-end", "arch": "B",
+  "name": "Marco", "pron": "He", "poss": "his",
+  "role": "Freelance designer", "roleLine": "designs brands for a dozen small clients.",
+  "style": "short", "glasses": false, "skin": "#C68E6B", "skin2": "#AD7656", "hair": "#2B1D14",
+  "shirt": "#14b8a6", "shirt2": "#0f8f82",
+  "problem": "His hours sit in a calendar, his rates in old emails and his invoices in a folder of drafts.",
+  "cost": "Month end costs him a whole Friday of copying and checking.",
+  "stakes": "rent is due before the clients pay",
+  "action": "asks for this month's invoices",
+  "pile": {"label": "Unbilled hours", "count": 64, "item": "doc"},
+  "sources": [["calendar", "Calendar"], ["mail", "Old emails"], ["folder", "Drafts"]],
+  "equation": "1 invoice = 1 lost hour",
+  "workaround": {"icon": "sheet", "text": "Copy last month's?", "verdict": "Not good enough"},
+  "setup": {
+   "inputs": [["calendar", "Calendars"], ["mail", "Email"], ["sheet", "Spreadsheets"], ["doc", "Contracts"]],
+   "items": [["Client hours", ["Tracked", "Rates set", "This month"]], ["Invoices", ["Drafted", "Numbered", "Ready"]], ["Reminders", ["Polite", "Scheduled", "Weekly"]]],
+   "badge": "Paid on time"
+  },
+  "app": {
+   "kind": "chat", "title": "Studio Marco", "placeholder": "Ask about your clients...",
+   "request": "Draft this month's invoices for every client",
+   "cards": [["Bluebird Studio", "32 hours at the agreed rate"], ["Oak and Ivy", "Fixed fee, second payment"]],
+   "result": [["6 invoices drafted, ready to send", "Hours and rates match each contract."], ["2 late payments flagged", "Friendly reminders are queued."]]
+  }
+ },
+ {
+  "n": 2, "slug": "translator-cash-flow", "arch": "C",
+  "name": "Aisha", "pron": "She", "poss": "her",
+  "role": "Freelance translator", "roleLine": "translates contracts for law firms in three languages.",
+  "style": "bun", "glasses": true, "skin": "#8D5A3B", "skin2": "#774A30", "hair": "#120C0A",
+  "shirt": "#f59e0b", "shirt2": "#d48506",
+  "problem": "She never knows which invoices are paid until she checks four bank statements.",
+  "cost": "Every quarter she loses two days to reconciling payments by hand.",
+  "stakes": "a tax deadline is two weeks away",
+  "action": "opens her cash-flow view",
+  "pile": {"label": "Payments to match", "count": 112, "item": "mail"},
+  "sources": [["sheet", "Bank exports"], ["mail", "Receipts"], ["doc", "Invoices"]],
+  "equation": "1 quarter = 2 lost days",
+  "workaround": {"icon": "sheet", "text": "One more spreadsheet?", "verdict": "Not good enough"},
+  "setup": {
+   "inputs": [["upload", "Bank exports"], ["mail", "Email"], ["doc", "Invoices"], ["calendar", "Due dates"]],
+   "items": [["Payments", ["Matched", "Dated", "Checked"]], ["Invoices", ["Paid", "Due soon", "Late"]], ["Tax set-aside", ["Estimated", "Monthly", "Saved"]]],
+   "badge": "Always reconciled"
+  },
+  "app": {
+   "kind": "dashboard", "title": "This quarter",
+   "metrics": [["Paid", 92, "% of invoices"], ["Due this month", 4, "invoices"], ["Days saved", 2, "this quarter"]],
+   "summaryTitle": "Quarter reconciled",
+   "result": [["41 of 44 invoices paid", "Three due dates are on the calendar."], ["Tax set-aside is on track", "Next payment is already put aside."]]
+  }
+ },
+ {
+  "n": 3, "slug": "photographer-quotes", "arch": "A",
+  "name": "Jonas", "pron": "He", "poss": "his",
+  "role": "Wedding photographer", "roleLine": "shoots forty weddings a year with a two-person team.",
+  "style": "curly", "glasses": false, "skin": "#F1C6A6", "skin2": "#DBA987", "hair": "#6B3E1F",
+  "shirt": "#fb7185", "shirt2": "#e0566c",
+  "problem": "Every couple wants a quote by tonight, and every quote starts from a blank page.",
+  "cost": "Writing quotes eats his evenings all through the spring.",
+  "stakes": "a slow quote means a lost booking",
+  "action": "fills in a new quote",
+  "pile": {"label": "Quote requests", "count": 37, "item": "mail"},
+  "sources": [["mail", "Enquiries"], ["phone", "Messages"], ["doc", "Price list"]],
+  "equation": "1 quote = 1 lost evening",
+  "workaround": {"icon": "doc", "text": "Reuse an old quote?", "verdict": "Not good enough"},
+  "setup": {
+   "inputs": [["mail", "Email"], ["chat", "Messages"], ["doc", "Packages"], ["calendar", "Calendar"]],
+   "items": [["Packages", ["Priced", "Up to date", "Add-ons"]], ["Quotes", ["Branded", "Signed", "Deposit"]], ["Calendar", ["Held", "Confirmed", "Synced"]]],
+   "badge": "Quotes in minutes"
+  },
+  "app": {
+   "kind": "form", "title": "New quote", "button": "Send quote",
+   "fields": [["Couple", "Sam and Riley"], ["Date", "Saturday 14 June"], ["Package", "Full day, two shooters"], ["Extras", "Album and prints"]],
+   "summaryTitle": "Quote sent",
+   "result": [["Quote sent with a deposit link", "The date is held for seven days."], ["Booked the same evening", "Deposit paid, calendar confirmed."]]
+  }
+ }
+]

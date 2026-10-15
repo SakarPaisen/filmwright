@@ -1,0 +1,42 @@
+# A hybrid film built from real recordings: the three clips the demo-app example records (S01-S03), framed by
+# animated scenes. Record them first:  filmwright build examples/demo-app   (writes examples/demo-app/videos/)
+title: Acme Tasks, from list to done
+file_prefix: acme-tasks-from-list-to-done
+wordmark: ACME TASKS
+tagline: Plan less. Do more.
+url: acme-tasks.example
+brand:
+  colors: {bg: "#0f1222", accent: "#7c5cff", alt: "#22c55e", warm: "#ff8a4c", ink: "#f4f5fb"}
+
+segments:
+  - scene: title
+    headline: Your week, in one list
+    sub: Plan less. Do more.
+    say: This is Acme Tasks. Here is how a busy week turns into one calm list.
+  - scene: statement
+    text: "Tasks hide in chats and inboxes.\nPut them in one list."
+    say: Tasks hide in chats, inboxes and sticky notes. Acme Tasks puts them in one list.
+  - clip: ../demo-app/videos/S01.mp4
+    trim: [0.5, 8.5]
+    label: acme-tasks.example
+    say: Everything due this week sits together, with a running count of what's open and what's done.
+  - scene: steps
+    title: Three steps, every task
+    items: [Write it down, Give it an owner, Tick it off]
+    say: Every task takes three steps. Write it down, give it an owner, and tick it off.
+  - clip: ../demo-app/videos/S02.mp4
+    trim: [1.0, 13.0]
+    label: acme-tasks.example
+    zoom: {at: 3.0, scale: 1.5, x: 0.45, y: 0.3, hold: 3.0}
+    say: Type a task, choose who owns it, and add it. It lands in the list right away.
+  - clip: ../demo-app/videos/S03.mp4
+    trim: [0.5, 10.5]
+    label: acme-tasks.example
+    say: When something's finished, tick it, and switch to Open to see only the work that's left.
+  - scene: stat
+    value: 3
+    label: steps from idea to done
+    say: Three steps, from idea to done.
+  - scene: outro
+    cta: Try it free
+    say: Plan less and do more, with Acme Tasks.

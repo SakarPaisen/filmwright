@@ -1,0 +1,11 @@
+# The Acme Tasks stories in YOUR voice. Record a consented sample first (see ../README.md), then:
+#   filmwright build examples/voices/cloned
+mode: explainer
+title: Acme Tasks stories, my voice
+explainer: {format: story, project: ../../explainer}
+voice:
+  type: clone
+  sample: voice/sample.wav      # made by: filmwright voice clone record --speaker "Your Name"
+music: {mood: calm}
+outputs: [hd]
+disclosure: end-card            # a short closing card says the narration is a cloned voice, used with consent

@@ -1,0 +1,12 @@
+# Three animated stories for a fictional invoicing app, each using a different product window
+# (chat, dashboard, form) and story shape. Corporate score, a presenter in the corner.
+#   filmwright build examples/explainer-invoicing
+mode: explainer
+title: Acme Invoice stories
+explainer: {format: story, project: .}
+voice: {type: preset, speaker: aiden, style: "Calm, confident and friendly, like a trusted advisor. Clear, even pace."}
+talking_head: {enabled: true, character: ana, corner: bottom-right}
+music: {mood: corporate}
+captions: {burn_in: true}
+outputs: [4k, hd, square]
+disclosure: metadata

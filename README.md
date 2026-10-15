@@ -6,6 +6,11 @@ with a one-page `reel.yaml`.
 
 Everything runs locally: the browser, the voices, the music, the encoding. Nothing is uploaded.
 
+![Frames from filmwright example films: an animated character story, a whiteboard sketch, a product dashboard, a
+recorded demo with a presenter, a hybrid title scene and a vertical feature montage](docs/media/gallery.jpg)
+
+<sub>Frames from the bundled examples (fictional Acme products, sample data).</sub>
+
 | | **Demo walkthrough** | **Animated explainer** | **Both** |
 |---|---|---|---|
 | What it shows | Your real app, recorded in a browser | Characters, whiteboard sketches, motion graphics | Animated scenes and recordings in one film |
@@ -67,7 +72,8 @@ filmwright build examples/montage       # a one-minute feature montage in 16:9, 
 python examples/both/make_sample_clip.py && filmwright build examples/both   # animation + a recording
 ```
 
-The examples use **Acme**, a fictional company, and sample data.
+The examples use **Acme**, a fictional company, and sample data. [examples/README.md](examples/README.md) lists all
+eight, from a feature montage for a gym app to stories in a cloned voice.
 
 ## Voices
 

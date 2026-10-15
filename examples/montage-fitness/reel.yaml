@@ -1,0 +1,10 @@
+# A one-minute feature montage for a fictional gym app, laid out natively for Reels/Shorts (9:16) and feeds (1:1)
+# as well as 16:9. Epic score with a downbeat on every feature change.
+#   filmwright build examples/montage-fitness
+mode: explainer
+title: Acme Fit montage
+explainer: {format: montage, project: .}
+voice: {type: preset, speaker: ryan, style: "Energetic and warm, like a coach before class. Clear, steady pace."}
+music: {mood: epic}
+outputs: [vertical, square, hd, gif]
+disclosure: metadata

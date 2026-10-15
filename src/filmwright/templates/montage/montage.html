@@ -416,11 +416,11 @@ function applyLayout() {
   document.querySelectorAll(".stagewrap").forEach(e => e.setAttribute("transform", tf(...st)));
   document.querySelectorAll(".colwrap").forEach(e => e.setAttribute("transform", tf(...co)));
   const fn = $("footnote");
-  if (fn) { fn.setAttribute("x", V ? 40 : 24); fn.setAttribute("y", V ? 1880 : 1062); fn.setAttribute("font-size", V ? 24 : 18); }
+  if (fn) { fn.setAttribute("x", V ? 40 : 24); fn.setAttribute("y", V ? 1800 : 1012); fn.setAttribute("font-size", V ? 24 : 18); }   // above the caption band
 }
 function footnote() {
   if (!MC.footnote) return;
-  const f = S("text", {id: "footnote", x: 80, y: 1046, "font-family": F.body, "font-weight": 500, "font-size": 20, fill: C.muted}, $("fx"), MC.footnote);
+  const f = S("text", {id: "footnote", x: 80, y: 1012, "font-family": F.body, "font-weight": 500, "font-size": 20, fill: C.muted}, $("fx"), MC.footnote);
   motion.set(f, {opacity: 0}); tl.to(f, {opacity: 1, duration: .3}, BEATS[1].start - .3); tl.to(f, {opacity: 0, duration: .3}, B.close.start - .4);
 }
 

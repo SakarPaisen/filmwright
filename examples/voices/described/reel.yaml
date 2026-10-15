@@ -1,0 +1,11 @@
+# The Acme Tasks stories narrated by a voice described in words (Apple Silicon: filmwright setup --voice described).
+#   filmwright build examples/voices/described
+mode: explainer
+title: Acme Tasks stories, described voice
+explainer: {format: story, project: ../../explainer}
+voice:
+  type: described
+  description: "Warm, unhurried female narrator in her forties with a gentle British accent, smiling as she speaks"
+music: {mood: inspiring}
+outputs: [hd]
+disclosure: metadata

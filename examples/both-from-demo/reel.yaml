@@ -1,0 +1,11 @@
+# Animated scenes around the real recordings from examples/demo-app, with a presenter and a playful score.
+#   filmwright build examples/demo-app          # records videos/S01-S03 first
+#   filmwright build examples/both-from-demo
+mode: both
+title: Acme Tasks, from list to done
+both: {film: film.yaml}
+voice: {type: preset, speaker: ryan, style: "Warm, friendly and slightly upbeat. Even pace."}
+talking_head: {enabled: true, character: kit, corner: bottom-left}
+music: {mood: playful}
+outputs: [4k, hd, vertical, web]
+disclosure: metadata
