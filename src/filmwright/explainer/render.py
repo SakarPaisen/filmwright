@@ -384,9 +384,9 @@ def copy_stems(src: Path, folder: Path, stem: str) -> list[Path]:
     from filmwright.core.mix import STEM_NAMES
     out = []
     for name in STEM_NAMES:
-        f = src / f"{name}.wav"
+        f, dst = src / f"{name}.wav", folder / f"{stem}-{name}.wav"
+        dst.unlink(missing_ok=True)                   # a part this film no longer has must not linger beside it
         if f.is_file():
-            dst = folder / f"{stem}-{name}.wav"
             shutil.copyfile(f, dst)
             out.append(dst)
     return out

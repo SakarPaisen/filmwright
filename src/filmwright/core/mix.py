@@ -94,6 +94,8 @@ def mix(narration_wav: Path | str | None, out_wav: Path | str, music_wav: Path |
     if stems_dir:
         sd = Path(stems_dir)
         sd.mkdir(parents=True, exist_ok=True)
+        for name in STEM_NAMES:                       # a part this mix doesn't have must not survive from an earlier one
+            (sd / f"{name}.wav").unlink(missing_ok=True)
         for k, lab in enumerate(labels):
             name = names[lab]
             graph.append(f"{lab}asplit=2[mx{k}][st{k}]")

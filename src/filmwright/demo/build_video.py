@@ -660,6 +660,9 @@ def main() -> int:
     nlist.write_text("".join(f"file '{p_}'\n" for p_ in narrs))
     run(["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", str(nlist), "-c:a", "aac", "-flags:a", "+bitexact", "-b:a", "192k", "-fflags", "+bitexact", "-metadata:s:a:0", "encoder=", str(m4a)])
     stems = bool(cfg.get("stems"))
+    from filmwright.core.mix import STEM_NAMES
+    for name in STEM_NAMES:                           # never deliver a stem left over from an earlier build
+        (out_base.parent / f"{out_base.name}-{name}.wav").unlink(missing_ok=True)
     if stems:
         write_stems(out_base, stem_src, trans_d, work)
     mus = music_plan(cfg)

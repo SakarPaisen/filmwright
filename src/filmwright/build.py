@@ -240,8 +240,10 @@ def finish(reel: dict, master: Path, already: list[Path], out_dir: Path, stem: s
     srt = master.with_name(stem + ".srt") if master.with_name(stem + ".srt").is_file() else master.with_suffix(".srt")
     if srt.is_file():
         shutil.copyfile(srt, out_dir / f"{stem}.srt")
+    from filmwright.core.mix import STEM_NAMES
+    for name in STEM_NAMES:
+        (out_dir / f"{stem}-{name}.wav").unlink(missing_ok=True)    # stems from an earlier build of this film
     if "stems" in reel["outputs"]:
-        from filmwright.core.mix import STEM_NAMES
         for name in STEM_NAMES:
             src = master.with_name(f"{stem}-{name}.wav")
             if src.is_file():
