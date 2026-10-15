@@ -1,0 +1,44 @@
+# Issue and pull-request labels. Source of truth: edit here, then run scripts/sync-labels.sh.
+# Every issue gets one `type:` label, at least one `area:` label, and a `status:` label; triage adds `priority:`.
+
+- {name: "type: bug", color: "d73a4a", description: "Something doesn't work as documented"}
+- {name: "type: feature", color: "a2eeef", description: "A new option, template, mood, character or output"}
+- {name: "type: docs", color: "0075ca", description: "Documentation is missing, wrong or unclear"}
+- {name: "type: question", color: "d876e3", description: "A question (most belong in Discussions)"}
+- {name: "type: chore", color: "c5def5", description: "Maintenance: CI, dependencies, refactoring, releases"}
+- {name: "type: performance", color: "fbca04", description: "Slower or heavier than it should be"}
+
+- {name: "area: voice", color: "1d76db", description: "Narration voices, Qwen3-TTS, espeak-ng, cloning and consent"}
+- {name: "area: read-back", color: "1d76db", description: "Whisper read-back check and retakes"}
+- {name: "area: music", color: "1d76db", description: "Composer, moods, sound effects, mixing"}
+- {name: "area: demo", color: "1d76db", description: "Screen-recorded walkthroughs and scenarios"}
+- {name: "area: explainer", color: "1d76db", description: "Animated story and montage films"}
+- {name: "area: hybrid", color: "1d76db", description: "Films that mix animation and recordings"}
+- {name: "area: presenter", color: "1d76db", description: "Talking-head characters and lip sync"}
+- {name: "area: export", color: "1d76db", description: "Output formats, stems, captions, encoding"}
+- {name: "area: cli", color: "1d76db", description: "filmwright commands, wizard, reel.yaml"}
+- {name: "area: setup", color: "1d76db", description: "Installing, filmwright setup and doctor"}
+- {name: "area: ci", color: "1d76db", description: "GitHub Actions, tests, release automation"}
+
+- {name: "platform: macos", color: "bfdadc", description: "Specific to macOS"}
+- {name: "platform: linux", color: "bfdadc", description: "Specific to Linux"}
+- {name: "platform: windows", color: "bfdadc", description: "Specific to Windows"}
+- {name: "i18n", color: "bfdadc", description: "Languages other than English, non-Latin scripts"}
+
+- {name: "status: needs triage", color: "ededed", description: "New; a maintainer hasn't looked yet"}
+- {name: "status: needs info", color: "ededed", description: "Waiting for the reporter"}
+- {name: "status: confirmed", color: "0e8a16", description: "Reproduced or accepted"}
+- {name: "status: in progress", color: "0e8a16", description: "Someone is working on it"}
+- {name: "status: blocked", color: "b60205", description: "Waiting on something outside this issue"}
+
+- {name: "priority: P1", color: "b60205", description: "Broken for most users, wrong output, or security; fix next"}
+- {name: "priority: P2", color: "d93f0b", description: "Important; planned for the next minor release"}
+- {name: "priority: P3", color: "fef2c0", description: "Nice to have; when time allows"}
+
+- {name: "good first issue", color: "7057ff", description: "Small, well-defined; good for a first contribution"}
+- {name: "help wanted", color: "008672", description: "Contributions especially welcome"}
+- {name: "dependencies", color: "c5def5", description: "Dependency updates (Dependabot)"}
+- {name: "accessibility", color: "f143ab", description: "Barrier affecting people with disabilities"}
+- {name: "duplicate", color: "cfd3d7", description: "Already reported"}
+- {name: "invalid", color: "e4e669", description: "Not a problem with filmwright"}
+- {name: "wontfix", color: "ffffff", description: "Out of scope; the issue explains why"}

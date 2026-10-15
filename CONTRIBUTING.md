@@ -3,6 +3,16 @@
 Thanks for helping. Bug reports, new scene templates, presenter characters, music moods and docs fixes are
 all welcome.
 
+## Issues first
+
+Every change starts from an issue, opened with one of the
+[issue forms](https://github.com/dassjaylabs/filmwright/issues/new/choose) and titled `area: what goes wrong` (bugs) or
+`area: what you'd like` (features), for example `export: OTIO timeline export`. Questions belong in
+[Discussions](https://github.com/dassjaylabs/filmwright/discussions). For anything bigger than a small fix, comment on the
+issue with your plan before you start, so nobody's work is wasted. Issues marked
+[`good first issue`](https://github.com/dassjaylabs/filmwright/labels/good%20first%20issue) are a good start. How issues are
+labelled and triaged: [docs/maintaining.md](docs/maintaining.md).
+
 ## Set up
 
 ```bash

@@ -1,8 +1,38 @@
 name: Feature request
-description: A new option, template, mood, character or output
-labels: [enhancement]
+description: A new option, template, mood, character, output or integration
+title: "<area>: <what you'd like>"
+labels: ["type: feature", "status: needs triage"]
 body:
-  - type: textarea
-    id: need
-    attributes: {label: What would you like to make?, description: "Describe the film or option, and why the current ones don't cover it."}
+  - type: markdown
+    attributes:
+      value: |
+        Please give the title the form **`area: what you'd like`**, for example `export: OTIO timeline export`.
+        Not sure it's a feature yet? Start in [Ideas](https://github.com/dassjaylabs/filmwright/discussions/categories/ideas).
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options: [voice, read-back check, music / sound effects, demo recording, explainer (story or montage), both (hybrid), presenter / lip sync, export / outputs / stems, CLI / reel.yaml / wizard, setup / platforms, docs, other]
     validations: {required: true}
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to make?
+      description: The film or workflow, and what the current options don't let you do.
+    validations: {required: true}
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What would solve it?
+      description: The option, output or behaviour you have in mind. A reel.yaml sketch helps.
+    validations: {required: true}
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives you've considered
+  - type: checkboxes
+    id: help
+    attributes:
+      label: Contributing
+      options:
+        - label: I'd like to work on this myself (a maintainer will confirm the approach first).

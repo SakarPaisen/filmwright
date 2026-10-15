@@ -1,0 +1,20 @@
+name: Documentation
+description: Something in the README or docs is missing, wrong or unclear
+title: "docs: <what's missing or wrong>"
+labels: ["type: docs", "status: needs triage"]
+body:
+  - type: input
+    id: page
+    attributes:
+      label: Page or section
+      placeholder: docs/voice.md, "Voice cloning and consent"
+    validations: {required: true}
+  - type: textarea
+    id: problem
+    attributes:
+      label: What's wrong or missing
+    validations: {required: true}
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: Suggested wording or fix

@@ -1,5 +1,8 @@
 ## What and why
 
+Fixes #<issue number> <!-- every change starts from an issue; "Fixes #12" closes it on merge -->
+
+
 ## How I tested it
 - [ ] `ruff check src tests`
 - [ ] `pytest`

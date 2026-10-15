@@ -1,0 +1,13 @@
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: {interval: weekly}
+    labels: ["dependencies", "area: ci"]
+    commit-message: {prefix: "ci"}
+  - package-ecosystem: pip
+    directory: /
+    schedule: {interval: weekly}
+    labels: ["dependencies"]
+    commit-message: {prefix: "deps"}
+    open-pull-requests-limit: 5
