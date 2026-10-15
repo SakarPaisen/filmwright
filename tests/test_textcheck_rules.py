@@ -43,5 +43,7 @@ def test_media_encoder_tags(tmp_path):
     subprocess.run(base + [str(tagged)], check=True)
     subprocess.run(base + ["-bsf:v", "filter_units=remove_types=6", "-fflags", "+bitexact", "-flags:v", "+bitexact",
                            "-metadata:s:v:0", "encoder=", str(clean)], check=True)
+    from filmwright.core.tags import strip_encoder_tags
+    strip_encoder_tags(clean)                     # ffmpeg 6.x still tags at encode time; the remux removes it
     assert any(f.kind == "media-tag" for f in check([tagged], "warn", log=lambda *_: None))
     assert check([clean], "warn", log=lambda *_: None) == []

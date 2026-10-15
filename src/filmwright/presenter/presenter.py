@@ -316,6 +316,8 @@ def overlay_on_video(in_mp4: Path | str, narration_wav: Path | str | None, out_m
         p = subprocess.run(cmd, capture_output=True, text=True)
         if p.returncode:
             raise RuntimeError(f"presenter overlay failed: {p.stderr[-600:]}")
+        from filmwright.core.tags import strip_encoder_tags
+        strip_encoder_tags(out_mp4)
         print(f"presenter: {name}, {corner}, lip-sync from {source}")
         return out_mp4
     finally:

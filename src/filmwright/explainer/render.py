@@ -370,6 +370,9 @@ def finish(frames: Path, mix_wav: Path, beats: list[dict], total: float, folder:
             overlay_on_video(f, vo_wav, tmp, th.get("character", "leo"), th.get("corner", "bottom-right"))
             tmp.replace(f)
         made.append(f)
+    from filmwright.core.tags import strip_encoder_tags
+    for f in made:
+        strip_encoder_tags(f)
     return made
 
 

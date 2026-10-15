@@ -127,6 +127,8 @@ def apply(mp4: Path | str, mode: str = "metadata", voice_type: str = "preset", o
             _with_metadata(src, tmp, text)
         else:
             _with_end_card(src, tmp, text)
+        from filmwright.core.tags import strip_encoder_tags
+        strip_encoder_tags(tmp)
         tmp.replace(dst)
     finally:
         tmp.unlink(missing_ok=True)

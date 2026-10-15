@@ -148,6 +148,9 @@ def render_outputs(master_mp4: Path | str, srt: Path | str | None, outputs: list
             made.append(teaser_gif(master, out_dir / f"{stem}-teaser.gif"))
     if srt_p and srt_p.exists() and srt_p.parent.resolve() != out_dir.resolve():
         shutil.copy(srt_p, out_dir / f"{stem}.srt")
+    from filmwright.core.tags import strip_encoder_tags
+    for f in made:
+        strip_encoder_tags(f)
     return made
 
 

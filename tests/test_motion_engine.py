@@ -96,12 +96,14 @@ def test_from_to_and_keyframes_and_function_values():
 def test_svg_transforms_pivot_on_svg_origin():
     pytest.importorskip("playwright")
     from playwright.sync_api import Error, sync_playwright
+
+    from filmwright.demo.recorder import launch_kwargs
     html = f"""<html><body><svg width="400" height="400"><rect id="r" x="100" y="100" width="100" height="50"/>
       <g id="g" transform="translate(10,20) scale(2)"><rect width="10" height="10"/></g></svg>
       <script>{MOTION.read_text()}</script></body></html>"""
     try:
         with sync_playwright() as pw:
-            b = pw.chromium.launch()
+            b = pw.chromium.launch(**launch_kwargs())
             p = b.new_page()
             p.set_content(html)
             res = p.evaluate("""() => {

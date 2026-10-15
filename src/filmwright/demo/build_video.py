@@ -620,6 +620,8 @@ def main() -> int:
          "-flags:v", "+bitexact", "-flags:a", "+bitexact", "-metadata:s:v:0", "encoder=", "-metadata:s:a:0", "encoder=",
          "-metadata:s:s:0", "language=eng", "-metadata", f"title={title}",
          "-movflags", "+faststart", str(mp4)])   # no encoder/tool tags, no encoder-settings SEI; NOT -map_metadata -1 (it wipes chapter titles)
+    from filmwright.core.tags import strip_encoder_tags
+    strip_encoder_tags(mp4)
     # poster + teaser: the first zoom moment of the first clip, else a little into the first clip
     first_clip = next((p_ for p_ in plans if p_["kind"] == "clip"), None)
     if first_clip and cfg.get("poster", True) is not False:

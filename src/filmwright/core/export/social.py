@@ -157,6 +157,8 @@ def main() -> int:
     if p.returncode:
         print(p.stderr[-800:], file=sys.stderr)
         return p.returncode
+    from filmwright.core.tags import strip_encoder_tags
+    strip_encoder_tags(a.out)
     print(f"{a.out} ({len(cues)} captions burned in, {w}x{h})")
     return 0
 
