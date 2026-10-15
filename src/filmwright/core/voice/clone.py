@@ -177,7 +177,7 @@ def finish(voice_dir: Path, sample: Path, speaker: str, source: str, transcript:
         transcript = None
     if not transcript:
         print("Transcribing with Whisper (the first run downloads about 1.6 GB) ...")
-        transcript = Transcriber("en")(sample)
+        transcript = Transcriber(None)(sample)          # Whisper detects the language; the sample may not be English
     sample.with_suffix(".txt").write_text(transcript + "\n")
     rec = write_consent(sample, speaker, source)
     print(f"\nSaved {sample} ({secs:.1f}s), {sample.with_suffix('.txt').name} and {rec.name}:\n  \"{transcript}\"")

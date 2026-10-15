@@ -29,6 +29,7 @@ import re
 import shutil
 import tempfile
 import time
+import unicodedata
 import wave
 from pathlib import Path
 from typing import Any
@@ -92,13 +93,30 @@ def sentences(text: str) -> list[str]:
 
 
 def words(text: str) -> list[str]:
-    return re.sub(r"[^a-z0-9' ]+", " ", text.lower().replace("-", " ")).split()
+    """Lower-cased words of any script, for comparing a line with what Whisper heard. Letters and digits are kept;
+    punctuation, symbols and accent marks are not ("crème" and "creme" compare equal)."""
+    text = unicodedata.normalize("NFKD", text).casefold().replace("-", " ")
+    return "".join(c if unicodedata.category(c)[0] in "LN" or c in "' " else "" if unicodedata.category(c) == "Mn"
+                   else " " for c in text).split()
+
+
+# Scripts written without spaces between words: their length is counted in characters, not words.
+_UNSPACED = re.compile(r"[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff\uff66-\uff9f]")
+
+
+def speech_seconds(text: str) -> float:
+    """A rough spoken length: about 155 words a minute, or 6 characters a second for Chinese and Japanese."""
+    unspaced = len(_UNSPACED.findall(text))
+    return max(1.0, len(words(_UNSPACED.sub(" ", text))) / 2.6 + unspaced / 6.0)
 
 
 def match_score(expected: str, heard: str) -> float:
     """Character-level similarity with spaces removed. Word-level scoring over-penalises short sentences:
-    a product name heard as two words would cost a six-word sentence a quarter of its score."""
+    a product name heard as two words would cost a six-word sentence a quarter of its score.
+    A line with nothing comparable left (or nothing heard) scores 0, never a free 1.0."""
     a, b = "".join(words(expected)), "".join(words(heard))
+    if not a or not b:
+        return 0.0
     return difflib.SequenceMatcher(None, a, b, autojunk=False).ratio()
 
 
@@ -224,7 +242,7 @@ class QwenVoice:
     def _render(self, text: str, out: Path, mode: str) -> None:
         """One sentence (or the design reference) with length check, read-back and retries."""
         rate = 24000
-        expected = max(1.0, len(words(text)) / 2.6)            # about 155 words a minute
+        expected = speech_seconds(text)
         best: tuple[float, Any] | None = None
         for attempt in range(ATTEMPTS):
             audio = self._generate(text, mode, self.seed + attempt * 1000)

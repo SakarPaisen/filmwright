@@ -6,6 +6,10 @@ First public release.
 
 - `stems` output: the narration, music and sound effects as separate WAVs beside each film, aligned to it and at
   their levels in the mix, for finishing in another editor.
+- Read-back check works in every language: it compared only English letters and digits, so Japanese, Chinese,
+  Korean and Russian lines all scored a perfect match, and Chinese and Japanese lines over about 3.5 seconds were
+  taken for runaway takes. Accent marks are ignored when comparing, and clone samples are transcribed in their own
+  language. (Reported by a user.)
 - Demo films: the narration no longer drifts behind the picture and captions from section to section (each
   section's AAC padding was being kept when sections were joined; up to about 60 ms in a 45-second film).
 
