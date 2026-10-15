@@ -78,3 +78,8 @@ options, and the CHANGELOG says how to migrate.
 - `cla-signatures` holds the CLA bot's records. Don't protect or delete it.
 - Dependabot opens weekly pull requests for GitHub Actions and Python dependencies, and security updates as needed.
 - Private vulnerability reporting is on; advisories are handled per [SECURITY.md](../SECURITY.md).
+- Secret scanning with push protection and CodeQL code scanning are on.
+- `CODEOWNERS` requests the maintainer's review on every pull request.
+- `stale.yml` marks `status: needs info` issues stale after 23 days and closes them 7 days later; nothing else is
+  ever marked stale.
+- Merges are squash-only, and merged branches are deleted.

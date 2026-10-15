@@ -1,0 +1,25 @@
+name: Stale "needs info"
+# Closes issues that have waited 30 days for the reporter (label `status: needs info`), as docs/maintaining.md says.
+# Nothing else is ever marked stale.
+on:
+  schedule: [{cron: "17 4 * * *"}]
+  workflow_dispatch:
+permissions:
+  issues: write
+jobs:
+  stale:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/stale@4391f3da665fdf50b6810c1a66712fb9ba21aa93   # v11.0.0
+        with:
+          only-labels: "status: needs info"
+          days-before-issue-stale: 23
+          days-before-issue-close: 7
+          stale-issue-label: stale
+          stale-issue-message: >
+            This issue has been waiting for more information for three weeks. It will close in 7 days unless
+            someone replies; it can always be reopened.
+          close-issue-message: >
+            Closing because the information we asked for didn't arrive. Reply with it and we'll reopen.
+          days-before-pr-stale: -1
+          days-before-pr-close: -1

@@ -39,6 +39,7 @@
 - {name: "help wanted", color: "008672", description: "Contributions especially welcome"}
 - {name: "dependencies", color: "c5def5", description: "Dependency updates (Dependabot)"}
 - {name: "accessibility", color: "f143ab", description: "Barrier affecting people with disabilities"}
+- {name: "stale", color: "ededed", description: "Waited 30 days for information; closes automatically"}
 - {name: "duplicate", color: "cfd3d7", description: "Already reported"}
 - {name: "invalid", color: "e4e669", description: "Not a problem with filmwright"}
 - {name: "wontfix", color: "ffffff", description: "Out of scope; the issue explains why"}
